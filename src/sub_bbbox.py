@@ -40,4 +40,23 @@ def send_control_commands():
     # Publish the control commands to the cmd_vel topic
     cmd_vel_publisher.publish(cmd_vel_msg)
 
-# Rest of the code remains the same...
+def get_camera_param(msg):
+    height = msg.height
+    width = msg.width
+    print(height, width)
+    return height, width
+
+
+if __name__ == '__main__':
+    rospy.init_node('green_box_controller')
+    
+    # Subscribe to the bounding boxes topic
+    rospy.Subscriber('/detected_objects_in_image', BoundingBoxes, boundingBoxesCallback)
+
+    get_param_sub = rospy.Subscriber('/usb_cam/image_raw', Image, get_camera_param)
+    
+    # Create a publisher for the cmd_vel topic
+    cmd_vel_publisher = rospy.Publisher('/cmd_vel', Twist, queue_size=10)
+    #print(position_error)
+    
+    rospy.spin()
