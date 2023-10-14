@@ -12,7 +12,11 @@ def LaserScanCallback(msg):
     # print(num_ranges)
 
     sum_ranges = sum(msg.ranges[split_num - 3:split_num + 4])
-    if abs(sum_ranges - 0.3) < 0.01:
+    average_range = sum_ranges / 7
+    print(sum_ranges)
+    print(average_range-3.3)
+    if (average_range - 3.3) <= 0.01:
+    # if abs(sum_ranges - 0.3) < 0.01:
         print("neko")
         send_control_commands()
 
@@ -28,10 +32,10 @@ def get_lidar_param(msg):
     angle_max = msg.angle_max
     angle_increment = msg.angle_increment
     range_min = msg.range_min
-    range_max = msg.range_maxありがとう
+    range_max = msg.range_max
     ranges = msg.ranges
     # print(angle_min, angle_max, angle_increment, range_min, range_max, ranges)
-    print(ranges[0])
+    # print(ranges[0])
     return angle_min, angle_max, angle_increment, range_min, range_max, ranges
 
 if __name__ == '__main__':
