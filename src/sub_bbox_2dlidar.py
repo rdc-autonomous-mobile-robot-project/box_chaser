@@ -7,6 +7,8 @@ from sensor_msgs.msg import LaserScan
 
 position_error = 0.0  # Define position_error as a global variable
 width = 0.0
+average_range = 0.0
+desired_distance = 0.5
 
 # Callback function for bounding box messages
 def boundingBoxesCallback(msg):
@@ -20,15 +22,16 @@ def boundingBoxesCallback(msg):
             # Object detected, send control commands
             camera_send_control_commands()
 
-# Callback function for bounding box messages
-def LaserScanCallback(msg):
-    #rangesの配列の要素数を取得
-    num_ranges = len(msg.ranges)
-    split_num = int(num_ranges/2)
-    sum_ranges = sum(msg.ranges[split_num - 3:split_num + 4])
-    average_range = sum_ranges / 7
-    if (average_range - 0.3) <= 0.01:
-        lidar_send_control_commands()
+# # Callback function for bounding box messages
+# def LaserScanCallback(msg):
+#     #rangesの配列の要素数を取得
+#     num_ranges = len(msg.ranges)
+#     split_num = int(num_ranges/2)
+#     sum_ranges = sum(msg.ranges[split_num - 3:split_num + 4])
+#     average_range = sum_ranges / 7
+#     print(average_range)
+#     if (average_range - 0.3) <= 0.01:
+#         lidar_send_control_commands()
 
 # Function to send control commands
 def camera_send_control_commands():
@@ -41,14 +44,29 @@ def camera_send_control_commands():
     cmd_vel_msg.linear.x = 0.1  # Linear velocity (m/s)
     cmd_vel_msg.angular.z = -float(position_error)/1000	# Use the value of position_error to set the angular velocity
     # Publish the control commands to the cmd_vel topic
-    cmd_vel_publisher.publish(cmd_vel_msg)
+    # print(average_range)
+
+    # print(average_range)
+    if width >= 140:#ここのしきい値は要調整
+        rospy.Subscriber('/scan', LaserScan, lidar_send_control_commands)
+    else:
+        cmd_vel_publisher.publish(cmd_vel_msg)
 
 # # Function to send control commands
-def lidar_send_control_commands():
-    print("send_control_commands")
-    cmd_vel_msg = Twist()
-    cmd_vel_msg.linear.x = 0.0  # Linear velocity (m/s)
-    cmd_vel_publisher.publish(cmd_vel_msg)
+def lidar_send_control_commands(msg):
+    num_ranges = len(msg.ranges)
+    split_num = int(num_ranges / 2)
+    sum_ranges = sum(msg.ranges[split_num - 3:split_num + 4])
+    average_range = sum_ranges / 7
+    print(average_range)
+    if average_range > desired_distance:
+        cmd = Twist()
+        cmd.linear.x = 0.2  # 0.2 m/sの前進速度（適宜調整）
+        cmd_vel_publisher.publish(cmd)
+    else:
+        cmd = Twist()
+        cmd.linear.x = 0.0  # 速度を停止
+        cmd_vel_publisher.publish(cmd)
 
 def calculate_xmax_xmin(msg):
     global width  # グローバル変数を使用するために必要
@@ -60,14 +78,15 @@ def calculate_xmax_xmin(msg):
 
         # 幅を計算
         width = xmax - xmin
+        print(width)
 
 if __name__ == '__main__':
     rospy.init_node('D1_node')
     
     rospy.Subscriber('/detected_objects_in_image', BoundingBoxes, boundingBoxesCallback)
-    if width >= 130:
-        rospy.Subscriber('/scan', LaserScan, LaserScanCallback)
-    
+    rospy.Subscriber('/detected_objects_in_image', BoundingBoxes, calculate_xmax_xmin)
+    # rospy.Subscriber('/scan', LaserScan, LaserScanCallback)
+
     # Create a publisher for the cmd_vel topic
     cmd_vel_publisher = rospy.Publisher('/cmd_vel', Twist, queue_size=10)
     
