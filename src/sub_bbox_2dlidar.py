@@ -48,7 +48,7 @@ def camera_send_control_commands():
 
     # print(average_range)
     if width >= 140:#ここのしきい値は要調整
-        rospy.Subscriber('/scan', LaserScan, lidar_send_control_commands)
+        rospy.Subscriber('/law_scan', LaserScan, lidar_send_control_commands)#box2なら/law_scanに変える　一般的なlidarなら/scan
     else:
         cmd_vel_publisher.publish(cmd_vel_msg)
 
