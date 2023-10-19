@@ -10,6 +10,7 @@ width = 0.0
 average_range = 0.0
 desired_distance = 0.3
 start_time = None
+flag_desired_distance = True
 
 # Callback function for bounding box messages
 def boundingBoxesCallback(msg):
@@ -26,8 +27,7 @@ def boundingBoxesCallback(msg):
 # Function to send control commands based on camera data
 def camera_send_control_commands():
     global position_error, start_time
-    if start_time is None:
-        start_time = rospy.get_time()  # Start the timer when desired_distance is reached
+
 
     # Create a Twist message to send control commands
     cmd_vel_msg = Twist()
@@ -48,24 +48,42 @@ def camera_send_control_commands():
 
 # Function to send control commands based on LIDAR data
 def lidar_send_control_commands(msg):
+    global flag_desired_distance
+
     num_ranges = len(msg.ranges)
     split_num = int(num_ranges / 2)
     sum_ranges = sum(msg.ranges[split_num - 3:split_num + 4])
     average_range = sum_ranges / 7
     print(average_range)
-    if average_range > desired_distance and start_time is not None:
-        current_time = rospy.get_time()
-        elapsed_time = current_time - start_time
-        if elapsed_time >= 10.0:
-            rospy.signal_shutdown("Program finished after 10 seconds")  # プログラムを終了させる
+    # if average_range > desired_distance and start_time is not None:
+    #     current_time = rospy.get_time()
+    #     elapsed_time = current_time - start_time
+    #     if elapsed_time >= 10.0:
+    #         rospy.signal_shutdown("Program finished after 10 seconds")  # プログラムを終了させる
 
-    if average_range > desired_distance:
+    if average_range > desired_distance and flag_desired_distance:
         cmd = Twist()
         cmd.linear.x = 0.1  # 0.2 m/sの前進速度（適宜調整）
         cmd_vel_publisher.publish(cmd)
     else:
         cmd = Twist()
         cmd.linear.x = 0.0  # 速度を停止
+        cmd_vel_publisher.publish(cmd)
+        flag_desired_distance = False
+        back_process()
+
+def back_process():
+    print("neki")
+    global start_time
+    if start_time is None:
+        start_time = rospy.get_time()  # Start the timer when desired_distance is reached
+    current_time = rospy.get_time()
+    elapsed_time = current_time - start_time
+    cmd = Twist()
+    cmd.linear.x = -0.1
+    cmd_vel_publisher.publish(cmd)
+    if elapsed_time >= 10.0:
+        cmd.linear.x = 0.0
         cmd_vel_publisher.publish(cmd)
 
 # Callback function for bounding box messages
@@ -82,11 +100,8 @@ def calculate_xmax_xmin(msg):
 
 if __name__ == '__main__':
     rospy.init_node('D1_node')
-
     rospy.Subscriber('/detected_objects_in_image', BoundingBoxes, boundingBoxesCallback)
     rospy.Subscriber('/detected_objects_in_image', BoundingBoxes, calculate_xmax_xmin)
-    # rospy.Subscriber('/scan', LaserScan, LaserScanCallback)
-
     # Create a publisher for the cmd_vel topic
     cmd_vel_publisher = rospy.Publisher('/cmd_vel', Twist, queue_size=10)
 
