@@ -1,0 +1,3 @@
+<launch>
+  <node name="D1_node" pkg="robot_follow_line" type="sub_bbox_2dlidar.py" output="screen"></node>
+</launch>
