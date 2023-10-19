@@ -8,7 +8,7 @@ from sensor_msgs.msg import LaserScan
 position_error = 0.0  # Define position_error as a global variable
 width = 0.0
 average_range = 0.0
-desired_distance = 0.5
+desired_distance = 0.3
 
 # Callback function for bounding box messages
 def boundingBoxesCallback(msg):
@@ -61,7 +61,7 @@ def lidar_send_control_commands(msg):
     print(average_range)
     if average_range > desired_distance:
         cmd = Twist()
-        cmd.linear.x = 0.2  # 0.2 m/sの前進速度（適宜調整）
+        cmd.linear.x = 0.1  # 0.2 m/sの前進速度（適宜調整）
         cmd_vel_publisher.publish(cmd)
     else:
         cmd = Twist()
