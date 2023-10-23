@@ -44,7 +44,7 @@ def camera_send_control_commands():
     print(width)
 
     if width >= 140:  # ここのしきい値は要調整
-        rospy.Subscriber('/scan', LaserScan, lidar_send_control_commands)
+        rospy.Subscriber('/low_scan', LaserScan, lidar_send_control_commands)
     else:
         cmd_vel_publisher.publish(cmd_vel_msg)
 
