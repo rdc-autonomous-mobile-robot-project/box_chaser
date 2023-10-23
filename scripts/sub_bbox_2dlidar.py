@@ -4,6 +4,7 @@ from geometry_msgs.msg import Twist
 from sensor_msgs.msg import Image
 from yolov5_pytorch_ros.msg import BoundingBoxes
 from sensor_msgs.msg import LaserScan
+import time
 
 position_error = 0.0  # Define position_error as a global variable
 width = 0.0
@@ -11,6 +12,7 @@ average_range = 0.0
 desired_distance = 0.3
 start_time = None
 flag_desired_distance = True
+approached_box=False
 
 # Callback function for bounding box messages
 def boundingBoxesCallback(msg):
@@ -49,7 +51,7 @@ def camera_send_control_commands():
 # Function to send control commands based on LIDAR data
 def lidar_send_control_commands(msg):
     global flag_desired_distance
-
+    global approached_box
     num_ranges = len(msg.ranges)
     split_num = int(num_ranges / 2)
     sum_ranges = sum(msg.ranges[split_num - 3:split_num + 4])
@@ -60,31 +62,42 @@ def lidar_send_control_commands(msg):
     #     elapsed_time = current_time - start_time
     #     if elapsed_time >= 10.0:
     #         rospy.signal_shutdown("Program finished after 10 seconds")  # プログラムを終了させる
-
     if average_range > desired_distance and flag_desired_distance:
         cmd = Twist()
         cmd.linear.x = 0.1  # 0.2 m/sの前進速度（適宜調整）
         cmd_vel_publisher.publish(cmd)
-    else:
+    elif approached_box:
+        back_process()
+    else:#ここのif文の条件が悪い
+        rospy.loginfo('wait process')
         cmd = Twist()
         cmd.linear.x = 0.0  # 速度を停止
         cmd_vel_publisher.publish(cmd)
         flag_desired_distance = False
-        back_process()
+        approached_box = True
+        rospy.sleep(6.0)
 
 def back_process():
-    print("neki")
+    rospy.loginfo("before")
+    # rospy.sleep(5.0)
+    rospy.loginfo("after")
     global start_time
     if start_time is None:
         start_time = rospy.get_time()  # Start the timer when desired_distance is reached
     current_time = rospy.get_time()
     elapsed_time = current_time - start_time
+    rospy.loginfo(elapsed_time)
     cmd = Twist()
     cmd.linear.x = -0.1
     cmd_vel_publisher.publish(cmd)
+    rospy.loginfo(cmd)
+    rospy.loginfo("backprocess")
+    # rospy.sleep(1.0)
     if elapsed_time >= 10.0:
+        rospy.loginfo("elapsed_time ok")
         cmd.linear.x = 0.0
         cmd_vel_publisher.publish(cmd)
+        rospy.signal_shutdown("Shutting down the node")
 
 # Callback function for bounding box messages
 def calculate_xmax_xmin(msg):
@@ -94,7 +107,6 @@ def calculate_xmax_xmin(msg):
         # バウンディングボックスの xmin と xmax を取得
         xmin = bbox.xmin
         xmax = bbox.xmax
-
         # 幅を計算
         width = xmax - xmin
 
@@ -107,4 +119,4 @@ if __name__ == '__main__':
 
     while not rospy.is_shutdown():
         # Sleep to reduce CPU usage
-        rospy.sleep(0.1)
+        rospy.sleep(0.5)
