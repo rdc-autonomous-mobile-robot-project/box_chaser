@@ -10,7 +10,7 @@ detected = False
 labels = []
 
 # フィルタリングする文字列のリスト
-filter_strings = ['tag']
+filter_strings = ['tag','green_box','blue_box']
 
 # コールバック関数
 def boundingBoxesCallback(data):

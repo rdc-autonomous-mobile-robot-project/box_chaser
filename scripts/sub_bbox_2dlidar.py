@@ -9,10 +9,12 @@ import time
 position_error = 0.0  # Define position_error as a global variable
 width = 0.0
 average_range = 0.0
-desired_distance = 0.3
+desired_distance = 0.4
 start_time = None
 flag_desired_distance = True
 approached_box=False
+
+detect_box = True
 
 # Callback function for bounding box messages
 def boundingBoxesCallback(msg):
@@ -24,12 +26,14 @@ def boundingBoxesCallback(msg):
             # Calculate the position error
             position_error = (xmin + xmax) / 2.0 - 320  # Adjust 320 as needed
             # Object detected, send control commands
-            camera_send_control_commands()
+            if detect_box:
+                camera_send_control_commands()
+            else:
+                rospy.loginfo("detect_box is False")
 
 # Function to send control commands based on camera data
 def camera_send_control_commands():
     global position_error, start_time
-
 
     # Create a Twist message to send control commands
     cmd_vel_msg = Twist()
@@ -41,10 +45,11 @@ def camera_send_control_commands():
     # Publish the control commands to the cmd_vel topic
 
     # Print width for debugging
-    print(width)
+    rospy.loginfo("Width: %f", width)
 
-    if width >= 140:  # ここのしきい値は要調整
-        rospy.Subscriber('/low_scan', LaserScan, lidar_send_control_commands)
+
+    if width >= 140:  # ここのしきい値は要調整 実環境だと130の方が良いかも
+        rospy.Subscriber('/scan', LaserScan, lidar_send_control_commands)
     else:
         cmd_vel_publisher.publish(cmd_vel_msg)
 
@@ -56,7 +61,7 @@ def lidar_send_control_commands(msg):
     split_num = int(num_ranges / 2)
     sum_ranges = sum(msg.ranges[split_num - 3:split_num + 4])
     average_range = sum_ranges / 7
-    print(average_range)
+    rospy.loginfo("Average range: %f", average_range)
     # if average_range > desired_distance and start_time is not None:
     #     current_time = rospy.get_time()
     #     elapsed_time = current_time - start_time
@@ -64,7 +69,7 @@ def lidar_send_control_commands(msg):
     #         rospy.signal_shutdown("Program finished after 10 seconds")  # プログラムを終了させる
     if average_range > desired_distance and flag_desired_distance:
         cmd = Twist()
-        cmd.linear.x = 0.1  # 0.2 m/sの前進速度（適宜調整）
+        cmd.linear.x = 0.05  # 0.2 m/sの前進速度（適宜調整）
         cmd_vel_publisher.publish(cmd)
     elif approached_box:
         back_process()
@@ -112,11 +117,12 @@ def calculate_xmax_xmin(msg):
 
 if __name__ == '__main__':
     rospy.init_node('D1_node')
+    r = rospy.Rate(1)
     rospy.Subscriber('/detected_objects_in_image', BoundingBoxes, boundingBoxesCallback)
     rospy.Subscriber('/detected_objects_in_image', BoundingBoxes, calculate_xmax_xmin)
     # Create a publisher for the cmd_vel topic
-    cmd_vel_publisher = rospy.Publisher('/cmd_vel', Twist, queue_size=10)
+    cmd_vel_publisher = rospy.Publisher('/cmd_vel', Twist, queue_size=1)
 
     while not rospy.is_shutdown():
         # Sleep to reduce CPU usage
-        rospy.sleep(0.5)
+        r.sleep()
