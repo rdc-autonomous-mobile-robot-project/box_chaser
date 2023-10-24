@@ -37,6 +37,8 @@ if __name__ == '__main__':
     while not rospy.is_shutdown():
         print(labels)
         
+
+        rospy.loginfo("labels: {}".format(labels))
         # フィルタリング
         filtered_labels = list(filter(lambda label: label not in filter_strings, labels))
         

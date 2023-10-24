@@ -4,17 +4,18 @@ from geometry_msgs.msg import Twist
 from sensor_msgs.msg import Image
 from yolov5_pytorch_ros.msg import BoundingBoxes
 from sensor_msgs.msg import LaserScan
+from std_srvs.srv import SetBool, SetBoolResponse
 import time
 
 position_error = 0.0  # Define position_error as a global variable
 width = 0.0
 average_range = 0.0
-desired_distance = 0.4
+desired_distance = 0.7
 start_time = None
 flag_desired_distance = True
 approached_box=False
 
-detect_box = True
+detect_box = False
 
 # Callback function for bounding box messages
 def boundingBoxesCallback(msg):
@@ -46,7 +47,6 @@ def camera_send_control_commands():
 
     # Print width for debugging
     rospy.loginfo("Width: %f", width)
-
 
     if width >= 140:  # ここのしきい値は要調整 実環境だと130の方が良いかも
         rospy.Subscriber('/scan', LaserScan, lidar_send_control_commands)
@@ -96,7 +96,7 @@ def back_process():
     cmd.linear.x = -0.1
     cmd_vel_publisher.publish(cmd)
     rospy.loginfo(cmd)
-    rospy.loginfo("backprocess")
+    rospy.loginfo("back process")
     # rospy.sleep(1.0)
     if elapsed_time >= 10.0:
         rospy.loginfo("elapsed_time ok")
@@ -115,14 +115,29 @@ def calculate_xmax_xmin(msg):
         # 幅を計算
         width = xmax - xmin
 
+def detect_box_srv(data):
+    resp = SetBoolResponse()
+    global detect_box
+    if data.data == True:
+        resp.message = "called"
+        resp.success = True
+        detect_box = True
+    else:
+        resp.message = "ready"
+        resp.success = False
+        detect_box = False
+    print(resp.message)
+    return resp
+
 if __name__ == '__main__':
     rospy.init_node('D1_node')
-    r = rospy.Rate(1)
+    # r = rospy.Rate(1)
     rospy.Subscriber('/detected_objects_in_image', BoundingBoxes, boundingBoxesCallback)
     rospy.Subscriber('/detected_objects_in_image', BoundingBoxes, calculate_xmax_xmin)
+    srv = rospy.Service('detect_box', SetBool, detect_box_srv)
     # Create a publisher for the cmd_vel topic
-    cmd_vel_publisher = rospy.Publisher('/cmd_vel', Twist, queue_size=1)
+    cmd_vel_publisher = rospy.Publisher('/cmd_vel', Twist, queue_size=10)
 
     while not rospy.is_shutdown():
         # Sleep to reduce CPU usage
-        r.sleep()
+        rospy.sleep(0.5)
