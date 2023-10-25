@@ -97,36 +97,12 @@ class RobotController:
             self.back_process()
         else:
             rospy.loginfo('wait process')
-            # self.wait_process_current_time = rospy.get_time()
-            # if self.wait_process_start_time is None:
-            #     self.wait_process_start_time = self.wait_process_current_time  # 初回のタイムスタンプを記録
-            # self.wait_process_elapsed_time = self.wait_process_current_time - self.wait_process_start_time
-
-            # if self.wait_process_start_time is None:
-            #     self.wait_process_start_time = rospy.get_time()  # Start the timer when desired_distance is reached
-            # else:
-            #     rospy.logwarn("start_time is false")
-            #     self.wait_process_current_time = rospy.get_time()
-            #     self.wait_process_elapsed_time = self.wait_process_current_time - self.wait_process_start_time
-            #     rospy.loginfo("elapsed_time: %f", self.wait_process_elapsed_time)
-
             start_time = time.time()
             while time.time() - start_time < 5.0:
 
-            # if self.wait_process_start_time is None:
-            #     self.wait_process_start_time = rospy.get_time()  # Start the timer when desired_distance is reached
-            # else:
-            #     self.wait_process_current_time = rospy.get_time()
-            #     self.wait_process_elapsed_time = self.wait_process_current_time - self.wait_process_start_time
-            #     rospy.loginfo("elapsed_time: %f", self.wait_process_elapsed_time)
-
-            # while self.wait_process_elapsed_time < 10.0:
                 cmd = Twist()
                 cmd.linear.x = 0.000001
                 self.cmd_vel_publisher.publish(cmd)
-                # rospy.loginfo(self.wait_process_elapsed_time)
-                # rospy.loginfo(self.wait_process_current_time)
-                # rospy.loginfo(self.start_time)  # <- ここは self.start_time ではなく self.wait_process_start_time
             self.flag_desired_distance = False
             self.approached_box = True
 
