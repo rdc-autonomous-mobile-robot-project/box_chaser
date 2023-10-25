@@ -15,6 +15,6 @@ def callback_srv(data):
 
 if __name__ == "__main__":
     rospy.init_node("srv_server")
-    srv = rospy.Service('service_call', SetBool, callback_srv)
+    srv = rospy.Service('finish', SetBool, callback_srv)
     print("ready")
     rospy.spin()
