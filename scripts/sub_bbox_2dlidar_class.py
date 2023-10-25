@@ -22,9 +22,12 @@ class RobotController:
         self.wait_process_current_time = 0
         self.wait_process_elapsed_time = 0
         self.time = 0
-
+        self.finish_camera_forward_process_flag = False
+        self.srv = rospy.Service('detect_box', SetBool, self.detect_box_srv)
+        
         rospy.Subscriber('/detected_objects_in_image', BoundingBoxes, self.boundingBoxesCallback)
         rospy.Subscriber('/detected_objects_in_image', BoundingBoxes, self.calculate_xmax_xmin)
+        rospy.Subscriber('/scan', LaserScan, self.lidar_send_control_commands)
         self.cmd_vel_publisher = rospy.Publisher('/cmd_vel', Twist, queue_size=1)
 
         try:
@@ -47,19 +50,39 @@ class RobotController:
                 self.camera_send_control_commands()
             else:
                 rospy.loginfo("detect_box is False")
+                rospy.loginfo(self.srv)
 
-    def camera_send_control_commands(self):
-        rospy.loginfo("camera_send_control_commands")
-        cmd_vel_msg = Twist()
-        cmd_vel_msg.linear.x = 0.1  # Linear velocity (m/s)
-        cmd_vel_msg.angular.z = -float(self.position_error) / 1000
-        self.cmd_vel_publisher.publish(cmd_vel_msg)
+    # def camera_send_control_commands(self):
+    #     rospy.loginfo("camera_send_control_commands")
+    #     cmd_vel_msg = Twist()
+    #     cmd_vel_msg.linear.x = 0.1  # Linear velocity (m/s)
+    #     cmd_vel_msg.angular.z = -float(self.position_error) / 1000
+    #     self.cmd_vel_publisher.publish(cmd_vel_msg)
+    #     if self.width >= 140:
+    #         self.finish_camera_forward_process_flag = True
+    #         self.lidar_send_control_commands()
+    #     else :
+    #         rospy.loginfo("camera_send_control_commands process is wrong")
 
-    def calculate_xmax_xmin(self, msg):
-        for bbox in msg.bounding_boxes:
-            xmin = bbox.xmin
-            xmax = bbox.xmax
-            self.width = xmax - xmin
+def camera_send_control_commands(self):
+    rospy.loginfo("camera_send_control_commands")
+    cmd_vel_msg = Twist()
+    cmd_vel_msg.linear.x = 0.1  # Linear velocity (m/s)
+    cmd_vel_msg.angular.z = -float(self.position_error) / 1000
+    self.cmd_vel_publisher.publish(cmd_vel_msg)
+    if self.width >= 140:
+        self.finish_camera_forward_process_flag = True
+        # Pass the LaserScan message to the lidar_send_control_commands method
+        self.lidar_send_control_commands(msg)
+    else:
+        rospy.loginfo("camera_send_control_commands process is wrong")
+
+
+def calculate_xmax_xmin(self, msg):
+    for bbox in msg.bounding_boxes:
+        xmin = bbox.xmin
+        xmax = bbox.xmax
+        self.width = xmax - xmin
 
     def detect_box_srv(self, data):
         rospy.loginfo("detect_box_srv")
@@ -78,33 +101,36 @@ class RobotController:
     def run(self):
         rate = rospy.Rate(1)
         while not rospy.is_shutdown():
-            scan_msg = rospy.wait_for_message('/scan', LaserScan)  # LaserScan メッセージを待ち受ける
-            self.lidar_send_control_commands(scan_msg)  # 引数に LaserScan メッセージを渡す
+            # scan_msg = rospy.wait_for_message('/scan', LaserScan)  # LaserScan メッセージを待ち受ける
+            # self.lidar_send_control_commands(scan_msg)  # 引数に LaserScan メッセージを渡す
+            
             rate.sleep()
 
-    def lidar_send_control_commands(self, msg):
-        rospy.loginfo("lidar_send_control_commands")
-        num_ranges = len(msg.ranges)  # msg として受け取った LaserScan メッセージを使用
-        split_num = int(num_ranges / 2)
-        sum_ranges = sum(msg.ranges[split_num - 3:split_num + 4])
-        self.average_range = sum_ranges / 7
-        rospy.loginfo("Average range: %f", self.average_range)
-        if self.average_range > self.desired_distance and self.flag_desired_distance:
-            cmd = Twist()
-            cmd.linear.x = 0.05
-            self.cmd_vel_publisher.publish(cmd)
-        elif self.approached_box:
-            self.back_process()
-        else:
-            rospy.loginfo('wait process')
-            start_time = time.time()
-            while time.time() - start_time < 5.0:
-
+    def lidar_send_control_commands(self,msg):
+        if self.detect_box and self.finish_camera_forward_process_flag:
+            rospy.loginfo("lidar_send_control_commands")
+            num_ranges = len(msg.ranges)  # msg として受け取った LaserScan メッセージを使用
+            split_num = int(num_ranges / 2)
+            sum_ranges = sum(msg.ranges[split_num - 3:split_num + 4])
+            self.average_range = sum_ranges / 7
+            rospy.loginfo("Average range: %f", self.average_range)
+            if self.average_range > self.desired_distance and self.flag_desired_distance:
                 cmd = Twist()
-                cmd.linear.x = 0.000001
+                cmd.linear.x = 0.05
                 self.cmd_vel_publisher.publish(cmd)
-            self.flag_desired_distance = False
-            self.approached_box = True
+            elif self.approached_box:
+                self.back_process()
+            else:
+                rospy.loginfo('wait process')
+                start_time = time.time()
+                while time.time() - start_time < 5.0:
+                    cmd = Twist()
+                    cmd.linear.x = 0.000001
+                    self.cmd_vel_publisher.publish(cmd)
+                self.flag_desired_distance = False
+                self.approached_box = True
+        else:
+            rospy.loginfo("detect_box is False")
 
     def back_process(self):
         rospy.loginfo("back process")

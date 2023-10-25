@@ -118,6 +118,7 @@ if __name__ == '__main__':
         current_time = rospy.get_time()
         elapsed_time = current_time - start_time
         rospy.loginfo("elapsed_time: %f", elapsed_time)
+        
         if elapsed_time >= 10.0 and detect_result_flag_flag == True:
         # if elapsed_time >= 20.0:
             rospy.wait_for_service('detect_result')
