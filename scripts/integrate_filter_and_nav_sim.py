@@ -13,7 +13,7 @@ class D1_node:
         self.position_error = 0.0
         self.width = 0.0
         self.average_range = 0.0
-        self.desired_distance = 0.9
+        self.desired_distance = 0.3
         self.start_time = None
         self.go_on_flag = True
 
@@ -107,7 +107,7 @@ class D1_node:
                 else:
                     rospy.loginfo('wait process')
                     start_time = time.time()
-                    while time.time() - start_time < 5.0:
+                    while time.time() - start_time < 10.0:
                         cmd = Twist()
                         cmd.linear.x = 0.000001
                         self.cmd_vel_publisher.publish(cmd)
