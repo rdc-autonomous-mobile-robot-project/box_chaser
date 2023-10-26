@@ -30,10 +30,19 @@ class D1_node:
         self.camera_send_control_commands_is_finished_flag = True
 
         self.vel = Twist()
+        self.str = String()
 
         self.detect_box_2 = False
         self.detect_result_flag_flag = False
+
         self.labels = []
+        self.filter_strings = ['tag', 'green_box','blue_box']
+        self.detected = False
+        self.label_string_count = 1
+        self.detected_publisher = rospy.Publisher('/detection_status', Bool, queue_size=10)
+        self.string_subscriber = rospy.Subscriber('/detected_objects_in_image', BoundingBoxes, self.string_callback)
+
+
         self.start_time = None
         self.finish_flag_flag = True
         self.cmd_vel_publisher = rospy.Publisher('/cmd_vel', Twist, queue_size=1)
@@ -43,6 +52,28 @@ class D1_node:
         self.calculate_bbox_width = rospy.Subscriber('/detected_objects_in_image', BoundingBoxes, self.calculate_xmax_xmin)
         self.laser_scan_subscriber = rospy.Subscriber('/scan', LaserScan, self.laserscanCallback)
         self.detect_box_ = rospy.Service("detect_box", SetBool, self.detect_box_srv)
+    #     self.label_string_subscriber = rospy.Subscriber("/label_string", SetBool, self.label_string)
+
+    def string_callback(self, data):
+        self.labels = [bbox.Class for bbox in data.bounding_boxes]
+        # rospy.loginfo(self.labels)
+        self.detected = bool(self.labels)
+        # rospy.loginfo(self.detected)
+
+    def label_string(self):
+        self.label_string_count += 1
+        rospy.loginfo(self.label_string_count)
+        label_str = ' '.join(self.labels)
+        label_msg = String()
+        label_msg.data = label_str
+        detection_msg = Bool()
+        detection_msg.data = self.detected
+        self.label_publisher.publish(label_msg)
+        self.detected_publisher.publish(detection_msg)
+
+
+
+
 
     def detect_box_srv(self, data):
         rospy.loginfo("detect_box_srv")
@@ -95,7 +126,7 @@ class D1_node:
             xmin = bbox.xmin
             xmax = bbox.xmax
             self.width = xmax - xmin
-            rospy.loginfo(self.width)
+            # rospy.loginfo(self.width)
 
     def camera_send_control_commands(self):
         if self.width > 0:
@@ -105,7 +136,6 @@ class D1_node:
             rospy.loginfo("self.vel.linear.x: %f", self.vel.linear.x)
             rospy.loginfo("self.vel.angular.z: %f", self.vel.angular.z)
             self.cmd_vel_publisher.publish(self.vel)
-
 
     def lidar_send_control_commands(self):
         rospy.loginfo("neko")
@@ -156,18 +186,39 @@ class D1_node:
         else:
             rospy.loginfo("elapsed_time is false")
 
+    def detect_result_client(self):
+        if self.start_time is None:
+            self.start_time = rospy.get_time()
+        else:
+            rospy.logwarn("start_time is false")
+        self.current_time = rospy.get_time()
+        self.elapsed_time = self.current_time - self.start_time
+        rospy.loginfo("elapsed_time: %f", self.elapsed_time)
+        if self.elapsed_time >= 10.0 and self.detect_result_flag_flag:
+            rospy.wait_for_service('detect_result')
+            try:
+                service_call = rospy.ServiceProxy('detect_result', SetBool)
+                service_call(True)
+                rospy.loginfo("finish detect_result")
+                self.detect_result_flag_flag = False
+            except rospy.ServiceException as e:
+                print ("Service call failed: %s" % e)
+        else:
+            rospy.loginfo("elapsed_time is false")
+
     # Change to accept laser_scan_msg argument
     def loop(self):
         rospy.loginfo("D1_node started")
         if self.go_on_flag and self.detect_box:
         # Call lidar_send_control_commands with laser_scan_msg argument
             self.camera_send_control_commands() # Pass the appropriate laser_scan_msg
-            rospy.loginfo("width:%f",self.width)
-            # rospy.loginfo()
-            if self.width > 140 or (self.width > 30 and self.average_range < 1.0):
-                self.lidar_send_control_commands()  # Pass the appropriate laser_scan_msg again
-                if self.approached_box:
-                    self.back_process()
+            if self.label_string_count < 2 and self.detected:
+                self.label_string()
+                if self.width > 140 or (self.width > 30 and self.average_range < 1.0):
+                    self.lidar_send_control_commands()  # Pass the appropriate laser_scan_msg again
+                    if self.approached_box:
+                        self.back_process()
+                    # self.detect_result_client()
 
 if __name__ == '__main__':
     D1 = D1_node()
