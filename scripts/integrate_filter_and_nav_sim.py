@@ -95,36 +95,17 @@ class D1_node:
             xmin = bbox.xmin
             xmax = bbox.xmax
             self.width = xmax - xmin
+            rospy.loginfo(self.width)
 
     def camera_send_control_commands(self):
-        rospy.loginfo("camera_send_control_commands")
-        self.vel.linear.x = 0.1  # Linear velocity (m/s)
-        self.vel.angular.z = -float(self.position_error) / 1000
-        rospy.loginfo("self.vel.linear.x: %f", self.vel.linear.x)
-        rospy.loginfo("self.vel.angular.z: %f", self.vel.angular.z)
-        self.cmd_vel_publisher.publish(self.vel)
+        if self.width > 0:
+            rospy.loginfo("camera_send_control_commands")
+            self.vel.linear.x = 0.05  # Linear velocity (m/s)
+            self.vel.angular.z = -float(self.position_error) / 1000
+            rospy.loginfo("self.vel.linear.x: %f", self.vel.linear.x)
+            rospy.loginfo("self.vel.angular.z: %f", self.vel.angular.z)
+            self.cmd_vel_publisher.publish(self.vel)
 
-    # def lidar_send_control_commands(self, laser_scan_msg):
-    #             rospy.loginfo("width: %f", self.width)
-    #             rospy.loginfo("lidar_send_control_commands")
-    #             num_ranges = len(msg.ranges)  # msg として受け取った LaserScan メッセージを使用
-    #             split_num = int(num_ranges / 2)
-    #             sum_ranges = sum(msg.ranges[split_num - 3:split_num + 4])
-    #             self.average_range = sum_ranges / 7
-    #             rospy.loginfo("Average range: %f", self.average_range)
-    #             if self.average_range > self.desired_distance and self.flag_desired_distance:
-    #                 self.vel.linear.x = 0.05
-    #                 self.cmd_vel_publisher.publish(self.vel)
-    #             elif self.approached_box:
-    #                 self.back_process()
-    #             else:
-    #                 rospy.loginfo('wait process')
-    #                 start_time = time.time()
-    #                 while time.time() - start_time < 10.0:
-    #                     self.vel.linear.x = 0.000001
-    #                     self.cmd_vel_publisher.publish(self.vel)
-    #                 self.flag_desired_distance = False
-    #                 self.approached_box = True
 
     def lidar_send_control_commands(self):
         rospy.loginfo("neko")
@@ -178,13 +159,15 @@ class D1_node:
     # Change to accept laser_scan_msg argument
     def loop(self):
         rospy.loginfo("D1_node started")
-        # if self.go_on_flag and self.detect_box:
+        if self.go_on_flag and self.detect_box:
         # Call lidar_send_control_commands with laser_scan_msg argument
-        # self.camera_send_control_commands() # Pass the appropriate laser_scan_msg
-        if self.width > 140 or (self.width > 30 and self.average_range < 1.0):
-            self.lidar_send_control_commands()  # Pass the appropriate laser_scan_msg again
-            if self.approached_box:
-                self.back_process()
+            self.camera_send_control_commands() # Pass the appropriate laser_scan_msg
+            rospy.loginfo("width:%f",self.width)
+            # rospy.loginfo()
+            if self.width > 140 or (self.width > 30 and self.average_range < 1.0):
+                self.lidar_send_control_commands()  # Pass the appropriate laser_scan_msg again
+                if self.approached_box:
+                    self.back_process()
 
 if __name__ == '__main__':
     D1 = D1_node()
