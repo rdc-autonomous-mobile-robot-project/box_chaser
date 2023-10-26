@@ -31,10 +31,10 @@ class D1_node:
         
         rospy.Subscriber('/detected_objects_in_image', BoundingBoxes, self.boundingBoxesCallback)
         rospy.Subscriber('/detected_objects_in_image', BoundingBoxes, self.calculate_xmax_xmin)
-        rospy.Subscriber('/low_scan', LaserScan, self.lidar_send_control_commands)
+        rospy.Subscriber('/scan', LaserScan, self.lidar_send_control_commands)
         rospy.Service("detect_box", SetBool, self.detect_box_srv)
         # rospy.Subscriber('/scan', LaserScan, self.chatterCallback)
-        self.cmd_vel_publisher = rospy.Publisher('/yolo_vel', Twist, queue_size=1)
+        self.cmd_vel_publisher = rospy.Publisher('/cmd_vel', Twist, queue_size=1)
 
         try:
             detect_box_client = rospy.ServiceProxy('detect_box_2', SetBool)
