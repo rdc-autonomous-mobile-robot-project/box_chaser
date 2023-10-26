@@ -5,6 +5,7 @@ from geometry_msgs.msg import Twist
 from sensor_msgs.msg import LaserScan
 from std_srvs.srv import SetBool, SetBoolResponse
 from yolov5_pytorch_ros.msg import BoundingBoxes
+from std_msgs.msg import Header, String, Bool
 
 class D1_node:
     def __init__(self):
@@ -14,10 +15,11 @@ class D1_node:
         self.average_range = 0.0
         self.desired_distance = 0.9
         self.start_time = None
+        self.go_on_flag = True
+
         self.flag_desired_distance = True
         self.approached_box = False
         self.detect_box = False
-        self.go_on_flag = True
         self.wait_process_start_time = None
         self.wait_process_current_time = 0
         self.wait_process_elapsed_time = 0
@@ -26,25 +28,32 @@ class D1_node:
         self.camera_send_control_commands_flag = False
         self.back_process_flag = True
         self.camera_send_control_commands_is_finished_flag = True
-        # self.srv = rospy.Service('detect_box', SetBool, self.detect_box_srv)
 
-        
-        rospy.Subscriber('/detected_objects_in_image', BoundingBoxes, self.boundingBoxesCallback)
-        rospy.Subscriber('/detected_objects_in_image', BoundingBoxes, self.calculate_xmax_xmin)
-        rospy.Subscriber('/scan', LaserScan, self.lidar_send_control_commands)
-        rospy.Service("detect_box", SetBool, self.detect_box_srv)
-        # rospy.Subscriber('/scan', LaserScan, self.chatterCallback)
+        self.detect_box_2 = False
+        self.detect_result_flag_flag = False
+        self.labels = []
+        self.start_time = None
+
         self.cmd_vel_publisher = rospy.Publisher('/cmd_vel', Twist, queue_size=1)
+        self.label_publisher = rospy.Publisher('/label_string', String, queue_size=1)
+        self.publisher_cmd_vel_by_camera = rospy.Subscriber('/detected_objects_in_image', BoundingBoxes, self.boundingBoxesCallback)
+        self.calculate_bbox_width = rospy.Subscriber('/detected_objects_in_image', BoundingBoxes, self.calculate_xmax_xmin)
+        self.publisher_cmd_vel_by_lidar = rospy.Subscriber('/scan', LaserScan, self.lidar_send_control_commands)
+        self.detect_box = rospy.Service("detect_box", SetBool, self.detect_box_srv)
 
-        try:
-            detect_box_client = rospy.ServiceProxy('detect_box_2', SetBool)
-            response = detect_box_client(True)
-            rospy.loginfo(f"Service client response: {response.message}")
-        except rospy.ServiceException as e:
-            rospy.logerr(f"Service call failed: {e}")
-    
-    # def chatterCallback(self, msg):
-    #     rospy.loginfo("chatterCallback")
+    def detect_box_srv(self, data):
+        rospy.loginfo("detect_box_srv")
+        resp = SetBoolResponse()
+        if data.data:
+            resp.message = "called"
+            resp.success = True
+            self.detect_box = True
+            self.go_on_flag = True
+        else:
+            resp.message = "ready"
+            resp.success = False
+            self.detect_box = False
+        return resp
 
     def boundingBoxesCallback(self, msg):
         rospy.loginfo("boundingBoxesCallback")
@@ -125,21 +134,12 @@ class D1_node:
             rospy.loginfo("elapsed_time ok")
             cmd.linear.x = 0.0
             self.cmd_vel_publisher.publish(cmd)
-            self.finish_flag()
-            self.detect_result_flag_client()
+            # self.finish_flag()
+            # self.detect_result_flag_client()
             self.go_on_flag = False
             self.back_process_flag = False
         else:
             rospy.loginfo("elapsed_time is false")
-
-    def detect_result_flag_client(self):
-        rospy.loginfo("detect_result_flag_client")
-        try:
-            service_call = rospy.ServiceProxy('detect_result_flag', SetBool)
-            service_call(True)
-            rospy.loginfo("finish detect_result_flag")
-        except rospy.ServiceException as e:
-            print("Service call failed: %s" % e)
 
     def finish_flag(self):
         rospy.loginfo("D1_node started")
@@ -150,37 +150,17 @@ class D1_node:
         except rospy.ServiceException as e:
             print("Service call failed: %s" % e)
 
-    def detect_box_srv(self, data):
-        rospy.loginfo("detect_box_srv")
-        resp = SetBoolResponse()
-        if data.data:
-            resp.message = "called"
-            resp.success = True
-            self.detect_box = True
-            self.go_on_flag = True
-        else:
-            resp.message = "ready"
-            resp.success = False
-            self.detect_box = False
-        return resp
-
     def loop(self):
-        rospy.loginfo("loop")
-        if self.detect_box and self.go_on_flag:
-            # self.boundingBoxesCallback()
-            if self.camera_send_control_commands_flag:
-                self.finish_camera_forward_process_flag = True
-                # Pass the LaserScan message to the lidar_send_control_commands method
-                # self.lidar_send_control_commands()
-            else:
-                rospy.loginfo("camera_send_control_commands process is wrong")
-        else:
-            rospy.loginfo("go_on_flag is False")
+        rospy.loginfo("D1_node started")
+        if self.go_on_flag:
+            rospy.loginfo("go_on_flag is True")
+            rospy.loginfo("width: %f", self.width)
+            rospy.loginfo("lidar_send_control_commands")
 
 if __name__ == '__main__':
-    node_define = D1_node()
+    D1 = D1_node()
     DURATION = 0.2
     r = rospy.Rate(1 / DURATION)
     while not rospy.is_shutdown():
-        node_define.loop()
+        D1.loop()
         r.sleep()
