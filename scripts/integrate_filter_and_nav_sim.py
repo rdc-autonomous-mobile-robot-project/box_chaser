@@ -68,7 +68,7 @@ class D1_node:
             print("Service call failed: %s" % e)
 
     def boundingBoxesCallback(self, msg):
-        rospy.loginfo("boundingBoxesCallback")
+        # rospy.loginfo("boundingBoxesCallback")
         for box in msg.bounding_boxes:
             if box.Class in ["tag", "green_box", "blue_box", "tag_a", "tag_b", "tag_c"]:
                 xmin = box.xmin
@@ -181,10 +181,10 @@ class D1_node:
         # if self.go_on_flag and self.detect_box:
         # Call lidar_send_control_commands with laser_scan_msg argument
         # self.camera_send_control_commands() # Pass the appropriate laser_scan_msg
-        # if self.width > 140 or (self.width > 30 and self.average_range < 1.0):
-        self.lidar_send_control_commands()  # Pass the appropriate laser_scan_msg again
-        if self.approached_box:
-            self.back_process()
+        if self.width > 140 or (self.width > 30 and self.average_range < 1.0):
+            self.lidar_send_control_commands()  # Pass the appropriate laser_scan_msg again
+            if self.approached_box:
+                self.back_process()
 
 if __name__ == '__main__':
     D1 = D1_node()
