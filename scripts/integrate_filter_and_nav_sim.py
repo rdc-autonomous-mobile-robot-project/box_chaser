@@ -77,8 +77,8 @@ class D1_node:
 
     def laserscanCallback(self, msg):
         self.laser_scan_msg = msg
-        rospy.loginfo("width: %f", self.width)
-        rospy.loginfo("lidar_send_control_commands")
+        # rospy.loginfo("width: %f", self.width)
+        # rospy.loginfo("lidar_send_control_commands")
         # Get the number of laser ranges in the LaserScan message
         num_ranges = len(self.laser_scan_msg.ranges)
         # Calculate the index to split the ranges in half (assuming symmetrical LiDAR data)
@@ -87,8 +87,8 @@ class D1_node:
         sum_ranges = sum(self.laser_scan_msg.ranges[split_num - 3:split_num + 4])
         # Calculate the average range in the selected region
         self.average_range = sum_ranges / 7
-        rospy.loginfo("Average range: %f", self.average_range)
-        rospy.loginfo("average_range-desired_distance: %f", self.average_range-self.desired_distance)
+        # rospy.loginfo("Average range: %f", self.average_range)
+        # rospy.loginfo("average_range-desired_distance: %f", self.average_range-self.desired_distance)
 
     def calculate_xmax_xmin(self, msg):
         for bbox in msg.bounding_boxes:
@@ -128,9 +128,11 @@ class D1_node:
 
     def lidar_send_control_commands(self):
         rospy.loginfo("neko")
+        rospy.loginfo("average_range: %f", self.average_range)
+        rospy.loginfo(self.average_range > self.desired_distance)
         # Check if the average range is greater than the desired distance and the flag_desired_distance is set
         # if self.average_range > self.desired_distance and self.flag_desired_distance:
-        if self.average_range < self.desired_distance:
+        if self.average_range > self.desired_distance:
             # Set the linear velocity to move forward (0.05 m/s)
             self.vel.linear.x = 0.05
             # Publish the linear velocity commands
@@ -140,7 +142,7 @@ class D1_node:
             # If none of the above conditions are met, wait for a specified time
             rospy.loginfo('wait process')
             start_time = time.time()
-            while time.time() - start_time < 10.0:
+            while time.time() - start_time < 6.0:
                 # Set a very low linear velocity for waiting
                 self.vel.linear.x = 0.000001
                 # Publish the linear velocity commands for waiting
@@ -152,6 +154,7 @@ class D1_node:
 
     def back_process(self):
         rospy.loginfo("back process")
+        # rospy.loginfo("self.average_range: %f", self.average_range)
         if self.start_time is None:
             self.start_time = rospy.get_time()
         else:
@@ -179,7 +182,7 @@ class D1_node:
         # Call lidar_send_control_commands with laser_scan_msg argument
         # self.camera_send_control_commands() # Pass the appropriate laser_scan_msg
         # if self.width > 140 or (self.width > 30 and self.average_range < 1.0):
-        # self.lidar_send_control_commands()  # Pass the appropriate laser_scan_msg again
+        self.lidar_send_control_commands()  # Pass the appropriate laser_scan_msg again
         if self.approached_box:
             self.back_process()
 
