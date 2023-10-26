@@ -29,7 +29,6 @@ class D1_node:
         self.back_process_flag = True
         self.camera_send_control_commands_is_finished_flag = True
 
-        self.laser_scan_msg = LaserScan()
         self.vel = Twist()
 
         self.detect_box_2 = False
@@ -42,6 +41,7 @@ class D1_node:
         self.label_publisher = rospy.Publisher('/label_string', String, queue_size=1)
         self.publisher_cmd_vel_by_camera = rospy.Subscriber('/detected_objects_in_image', BoundingBoxes, self.boundingBoxesCallback)
         self.calculate_bbox_width = rospy.Subscriber('/detected_objects_in_image', BoundingBoxes, self.calculate_xmax_xmin)
+        self.laser_scan_subscriber = rospy.Subscriber('/scan', LaserScan, self.laserscanCallback)
         self.detect_box_ = rospy.Service("detect_box", SetBool, self.detect_box_srv)
 
     def detect_box_srv(self, data):
@@ -75,18 +75,34 @@ class D1_node:
                 xmax = box.xmax
                 self.position_error = (xmin + xmax) / 2.0 - 320  # Adjust 320 as needed
 
+    def laserscanCallback(self, msg):
+        self.laser_scan_msg = msg
+        rospy.loginfo("width: %f", self.width)
+        rospy.loginfo("lidar_send_control_commands")
+        # Get the number of laser ranges in the LaserScan message
+        num_ranges = len(self.laser_scan_msg.ranges)
+        # Calculate the index to split the ranges in half (assuming symmetrical LiDAR data)
+        split_num = int(num_ranges / 2)
+        # Calculate the sum of a small range of laser measurements around the center
+        sum_ranges = sum(self.laser_scan_msg.ranges[split_num - 3:split_num + 4])
+        # Calculate the average range in the selected region
+        self.average_range = sum_ranges / 7
+        rospy.loginfo("Average range: %f", self.average_range)
+        rospy.loginfo("average_range-desired_distance: %f", self.average_range-self.desired_distance)
+
     def calculate_xmax_xmin(self, msg):
         for bbox in msg.bounding_boxes:
             xmin = bbox.xmin
             xmax = bbox.xmax
             self.width = xmax - xmin
 
-
     def camera_send_control_commands(self):
-            rospy.loginfo("camera_send_control_commands")
-            self.vel.linear.x = 0.1  # Linear velocity (m/s)
-            self.vel.angular.z = -float(self.position_error) / 1000
-            self.cmd_vel_publisher.publish(self.vel)
+        rospy.loginfo("camera_send_control_commands")
+        self.vel.linear.x = 0.1  # Linear velocity (m/s)
+        self.vel.angular.z = -float(self.position_error) / 1000
+        rospy.loginfo("self.vel.linear.x: %f", self.vel.linear.x)
+        rospy.loginfo("self.vel.angular.z: %f", self.vel.angular.z)
+        self.cmd_vel_publisher.publish(self.vel)
 
     # def lidar_send_control_commands(self, laser_scan_msg):
     #             rospy.loginfo("width: %f", self.width)
@@ -110,32 +126,16 @@ class D1_node:
     #                 self.flag_desired_distance = False
     #                 self.approached_box = True
 
-    def lidar_send_control_commands(self, laser_scan_msg):
-        rospy.loginfo("width: %f", self.width)
-        rospy.loginfo("lidar_send_control_commands")
-
-        # Get the number of laser ranges in the LaserScan message
-        num_ranges = len(laser_scan_msg.ranges)
-
-        # Calculate the index to split the ranges in half (assuming symmetrical LiDAR data)
-        split_num = int(num_ranges / 2)
-
-        # Calculate the sum of a small range of laser measurements around the center
-        sum_ranges = sum(laser_scan_msg.ranges[split_num - 3:split_num + 4])
-
-        # Calculate the average range in the selected region
-        self.average_range = sum_ranges / 7
-        rospy.loginfo("Average range: %f", self.average_range)
-
+    def lidar_send_control_commands(self):
+        rospy.loginfo("neko")
         # Check if the average range is greater than the desired distance and the flag_desired_distance is set
-        if self.average_range > self.desired_distance and self.flag_desired_distance:
+        # if self.average_range > self.desired_distance and self.flag_desired_distance:
+        if self.average_range < self.desired_distance:
             # Set the linear velocity to move forward (0.05 m/s)
             self.vel.linear.x = 0.05
             # Publish the linear velocity commands
             self.cmd_vel_publisher.publish(self.vel)
-        elif self.approached_box:
-            # If the robot has approached a box, initiate the back_process
-            self.back_process()
+            rospy.loginfo("self.vel.linear.x: %f", self.vel.linear.x)
         else:
             # If none of the above conditions are met, wait for a specified time
             rospy.loginfo('wait process')
@@ -145,12 +145,10 @@ class D1_node:
                 self.vel.linear.x = 0.000001
                 # Publish the linear velocity commands for waiting
                 self.cmd_vel_publisher.publish(self.vel)
-
-            # Update the flag to indicate that the desired distance has been reached
-            self.flag_desired_distance = False
-
-            # Mark that the robot has approached a box
-            self.approached_box = True
+                # Update the flag to indicate that the desired distance has been reached
+                self.flag_desired_distance = False
+                # Mark that the robot has approached a box
+                self.approached_box = True
 
     def back_process(self):
         rospy.loginfo("back process")
@@ -174,26 +172,16 @@ class D1_node:
         else:
             rospy.loginfo("elapsed_time is false")
 
-    # def loop(self):
-    #     rospy.loginfo("D1_node started")
-    #     if self.go_on_flag and self.detect_box:
-    #             self.camera_send_control_commands()
-    #             if self.width > 140 or (self.width > 30 and self.average_range < 1.0):
-    #                 self.lidar_send_control_commands()
-    #                 if self.approached_box:
-    #                     self.back_process()
-
     # Change to accept laser_scan_msg argument
     def loop(self):
         rospy.loginfo("D1_node started")
-        if self.go_on_flag and self.detect_box:
-            # Call lidar_send_control_commands with laser_scan_msg argument
-            self.camera_send_control_commands() # Pass the appropriate laser_scan_msg
-            if self.width > 140 or (self.width > 30 and self.average_range < 1.0):
-                self.lidar_send_control_commands(self.laser_scan_msg)  # Pass the appropriate laser_scan_msg again
-                if self.approached_box:
-                    self.back_process()
-
+        # if self.go_on_flag and self.detect_box:
+        # Call lidar_send_control_commands with laser_scan_msg argument
+        # self.camera_send_control_commands() # Pass the appropriate laser_scan_msg
+        # if self.width > 140 or (self.width > 30 and self.average_range < 1.0):
+        # self.lidar_send_control_commands()  # Pass the appropriate laser_scan_msg again
+        if self.approached_box:
+            self.back_process()
 
 if __name__ == '__main__':
     D1 = D1_node()
