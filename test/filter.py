@@ -7,7 +7,7 @@ class Filter:
     def __init__(self):
         rospy.init_node('filter', anonymous=True)
         self.labels = []
-        self.filter_strings = ['tag', 'green_box']
+        self.filter_strings = ['tag', 'green_box','tag_b']
         self.detected = False
         self.label_string_count = 1
         self.label_publisher = rospy.Publisher('/label_string', String, queue_size=1)
@@ -16,9 +16,9 @@ class Filter:
 
     def string_callback(self, data):
         self.labels = [bbox.Class for bbox in data.bounding_boxes]
-        rospy.loginfo(self.labels)
+        # rospy.loginfo(self.labels)
         self.detected = bool(self.labels)
-        rospy.loginfo(self.detected)
+        # rospy.loginfo(self.detected)
 
     def label_string(self):
         self.label_string_count += 1

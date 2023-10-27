@@ -47,12 +47,12 @@ class D1_node:
 
         self.start_time = None
         self.finish_flag_flag = True
-        self.cmd_vel_publisher = rospy.Publisher('/yolo_vel', Twist, queue_size=1)
+        self.cmd_vel_publisher = rospy.Publisher('/cmd_vel', Twist, queue_size=1)
 
         self.label_publisher = rospy.Publisher('/label_string', String, queue_size=1)
         self.publisher_cmd_vel_by_camera = rospy.Subscriber('/detected_objects_in_image', BoundingBoxes, self.boundingBoxesCallback)
         self.calculate_bbox_width = rospy.Subscriber('/detected_objects_in_image', BoundingBoxes, self.calculate_xmax_xmin)
-        self.laser_scan_subscriber = rospy.Subscriber('/low_scan', LaserScan, self.laserscanCallback)
+        self.laser_scan_subscriber = rospy.Subscriber('/scan', LaserScan, self.laserscanCallback)
         self.detect_box_ = rospy.Service("detect_box", SetBool, self.detect_box_srv)
     #     self.label_string_subscriber = rospy.Subscriber("/label_string", SetBool, self.label_string)
 
@@ -146,7 +146,7 @@ class D1_node:
         # if self.average_range > self.desired_distance and self.flag_desired_distance:
         if self.average_range > self.desired_distance:
             # Set the linear velocity to move forward (0.05 m/s)
-            self.vel.linear.x = 0.2
+            self.vel.linear.x = 0.05
             # Publish the linear velocity commands
             self.cmd_vel_publisher.publish(self.vel)
             rospy.loginfo("self.vel.linear.x: %f", self.vel.linear.x)
@@ -236,7 +236,7 @@ class D1_node:
 
 if __name__ == '__main__':
     D1 = D1_node()
-    DURATION = 0.02
+    DURATION = 0.2
     r = rospy.Rate(1 / DURATION)
     while not rospy.is_shutdown():
         D1.loop()
