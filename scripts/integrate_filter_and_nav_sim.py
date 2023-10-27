@@ -33,7 +33,6 @@ class D1_node:
         self.str = String()
 
         self.detect_box_2 = False
-        self.detect_result_flag_flag = False
 
         self.labels = []
         self.filter_strings = ['tag', 'green_box','blue_box']
@@ -118,8 +117,8 @@ class D1_node:
         sum_ranges = sum(self.laser_scan_msg.ranges[split_num - 3:split_num + 4])
         # Calculate the average range in the selected region
         self.average_range = sum_ranges / 7
-        # rospy.loginfo("Average range: %f", self.average_range)
-        # rospy.loginfo("average_range-desired_distance: %f", self.average_range-self.desired_distance)
+        rospy.loginfo("Average range: %f", self.average_range)
+        rospy.loginfo("average_range-desired_distance: %f", self.average_range-self.desired_distance)
 
     def calculate_xmax_xmin(self, msg):
         for bbox in msg.bounding_boxes:
@@ -129,13 +128,14 @@ class D1_node:
             # rospy.loginfo(self.width)
 
     def camera_send_control_commands(self):
-        if self.width > 0:
-            rospy.loginfo("camera_send_control_commands")
-            self.vel.linear.x = 0.05  # Linear velocity (m/s)
-            self.vel.angular.z = -float(self.position_error) / 1000
-            rospy.loginfo("self.vel.linear.x: %f", self.vel.linear.x)
-            rospy.loginfo("self.vel.angular.z: %f", self.vel.angular.z)
-            self.cmd_vel_publisher.publish(self.vel)
+        # if self.width > 0:
+        rospy.loginfo("camera_send_control_commands")
+        self.vel.linear.x = 0.05  # Linear velocity (m/s)
+        self.vel.angular.z = -float(self.position_error) / 1000
+        rospy.loginfo("self.vel.linear.x: %f", self.vel.linear.x)
+        rospy.loginfo("self.vel.angular.z: %f", self.vel.angular.z)
+        rospy.loginfo(self.width>140)
+        self.cmd_vel_publisher.publish(self.vel)
 
     def lidar_send_control_commands(self):
         rospy.loginfo("neko")
@@ -194,13 +194,12 @@ class D1_node:
         self.current_time = rospy.get_time()
         self.elapsed_time = self.current_time - self.start_time
         rospy.loginfo("elapsed_time: %f", self.elapsed_time)
-        if self.elapsed_time >= 10.0 and self.detect_result_flag_flag:
+        if self.elapsed_time >= 10.0:
             rospy.wait_for_service('detect_result')
             try:
                 service_call = rospy.ServiceProxy('detect_result', SetBool)
                 service_call(True)
                 rospy.loginfo("finish detect_result")
-                self.detect_result_flag_flag = False
             except rospy.ServiceException as e:
                 print ("Service call failed: %s" % e)
         else:
@@ -212,13 +211,15 @@ class D1_node:
         if self.go_on_flag and self.detect_box:
         # Call lidar_send_control_commands with laser_scan_msg argument
             self.camera_send_control_commands() # Pass the appropriate laser_scan_msg
-            if self.label_string_count < 2 and self.detected:
-                self.label_string()
-                if self.width > 140 or (self.width > 30 and self.average_range < 1.0):
-                    self.lidar_send_control_commands()  # Pass the appropriate laser_scan_msg again
-                    if self.approached_box:
-                        self.back_process()
-                    # self.detect_result_client()
+            rospy.loginfo(self.width)
+            # if self.label_string_count < 2 and self.detected:
+            #     self.label_string()
+
+            if self.width > 140 or (self.width > 30 and self.average_range < 1.0):
+                self.lidar_send_control_commands()  # Pass the appropriate laser_scan_msg again
+                if self.approached_box:
+                    self.back_process()
+                    self.detect_result_client()
 
 if __name__ == '__main__':
     D1 = D1_node()
