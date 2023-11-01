@@ -106,20 +106,12 @@ class D1_node:
                 xmax = box.xmax
                 self.position_error = (xmin + xmax) / 2.0 - 320  # Adjust 320 as needed
 
-    def laserscanCallback(self, msg):
+    def laserscanCallback(self, msg):#現在のプログラムの構成では，正面のrangesしか読んでいないので正面以外から障害物や人が来た時に対応ができない．
         self.laser_scan_msg = msg
-        # rospy.loginfo("width: %f", self.width)
-        # rospy.loginfo("lidar_send_control_commands")
-        # Get the number of laser ranges in the LaserScan message
         num_ranges = len(self.laser_scan_msg.ranges)
-        # Calculate the index to split the ranges in half (assuming symmetrical LiDAR data)
         split_num = int(num_ranges / 2)
-        # Calculate the sum of a small range of laser measurements around the center
         sum_ranges = sum(self.laser_scan_msg.ranges[split_num - 3:split_num + 4])
-        # Calculate the average range in the selected region
         self.average_range = sum_ranges / 7
-        # rospy.loginfo("Average range: %f", self.average_range)
-        # rospy.loginfo("average_range-desired_distance: %f", self.average_range-self.desired_distance)
 
     def calculate_xmax_xmin(self, msg):
         for bbox in msg.bounding_boxes:
@@ -128,9 +120,9 @@ class D1_node:
             self.width = xmax - xmin
             # rospy.loginfo(self.width)
 
-    def camera_send_control_commands(self):
+    def camera_send_control_commands(self):#この関数が読み出される時点でx軸方向に前進するため，cmd_velの与え方を変更するべき
         rospy.loginfo("camera_send_control_commands")
-        self.vel.linear.x = 0.2  # Linear velocity (m/s)
+        self.vel.linear.x = 0.2  # この行と次の行の動作指令値の与え方を変更する必要がある．具体的には一定以上の値になった時に動作指令値に制限をつける
         self.vel.angular.z = -float(self.position_error) / 1000
         # rospy.loginfo("self.vel.linear.x: %f", self.vel.linear.x)
         # rospy.loginfo("self.vel.angular.z: %f", self.vel.angular.z)
@@ -163,7 +155,7 @@ class D1_node:
                 # Mark that the robot has approached a box
                 self.approached_box = True
 
-    def back_process(self):
+    def back_process(self):#現在の構成では，規定の時間後退するわけではなく2~3秒後退する状況となっている．
         rospy.loginfo(self.label_msg2)
         rospy.loginfo("back process")
         # rospy.loginfo("self.average_range: %f", self.average_range)
@@ -190,7 +182,6 @@ class D1_node:
             rospy.loginfo("elapsed_time is false")
 
     def detect_result_client(self):
-        
         if self.start_time is None:
             self.start_time = rospy.get_time()
         else:
