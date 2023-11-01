@@ -13,7 +13,7 @@ class D1_node:
         self.position_error = 0.0
         self.width = 0.0
         self.average_range = 0.0
-        self.desired_distance = 0.4
+        self.desired_distance = 0.45
         self.start_time = None
         self.go_on_flag = True
 
@@ -47,12 +47,12 @@ class D1_node:
 
         self.start_time = None
         self.finish_flag_flag = True
-        self.cmd_vel_publisher = rospy.Publisher('/cmd_vel', Twist, queue_size=1)
+        self.cmd_vel_publisher = rospy.Publisher('/yolo_vel', Twist, queue_size=1)
 
         self.label_publisher = rospy.Publisher('/label_string', String, queue_size=1)
         self.publisher_cmd_vel_by_camera = rospy.Subscriber('/detected_objects_in_image', BoundingBoxes, self.boundingBoxesCallback)
         self.calculate_bbox_width = rospy.Subscriber('/detected_objects_in_image', BoundingBoxes, self.calculate_xmax_xmin)
-        self.laser_scan_subscriber = rospy.Subscriber('/scan', LaserScan, self.laserscanCallback)
+        self.laser_scan_subscriber = rospy.Subscriber('/low_scan', LaserScan, self.laserscanCallback)
         self.detect_box_ = rospy.Service("detect_box", SetBool, self.detect_box_srv)
     #     self.label_string_subscriber = rospy.Subscriber("/label_string", SetBool, self.label_string)
 
@@ -131,7 +131,7 @@ class D1_node:
     def camera_send_control_commands(self):
         # if self.width > 0:
         rospy.loginfo("camera_send_control_commands")
-        self.vel.linear.x = 0.05  # Linear velocity (m/s)
+        self.vel.linear.x = 0.2  # Linear velocity (m/s)
         self.vel.angular.z = -float(self.position_error) / 1000
         # rospy.loginfo("self.vel.linear.x: %f", self.vel.linear.x)
         # rospy.loginfo("self.vel.angular.z: %f", self.vel.angular.z)
@@ -139,14 +139,13 @@ class D1_node:
         self.cmd_vel_publisher.publish(self.vel)
 
     def lidar_send_control_commands(self):
-        rospy.loginfo("neko")
         rospy.loginfo("average_range: %f", self.average_range)
         rospy.loginfo(self.average_range > self.desired_distance)
         # Check if the average range is greater than the desired distance and the flag_desired_distance is set
         # if self.average_range > self.desired_distance and self.flag_desired_distance:
         if self.average_range > self.desired_distance:
             # Set the linear velocity to move forward (0.05 m/s)
-            self.vel.linear.x = 0.05
+            self.vel.linear.x = 0.2
             # Publish the linear velocity commands
             self.cmd_vel_publisher.publish(self.vel)
             rospy.loginfo("self.vel.linear.x: %f", self.vel.linear.x)
@@ -157,6 +156,7 @@ class D1_node:
             while time.time() - start_time < 6.0:
                 # Set a very low linear velocity for waiting
                 self.vel.linear.x = 0.000001
+                self.vel.angular.z = 0.000001
                 # Publish the linear velocity commands for waiting
                 self.cmd_vel_publisher.publish(self.vel)
                 # Update the flag to indicate that the desired distance has been reached
@@ -174,11 +174,11 @@ class D1_node:
             rospy.logwarn("start_time is false")
         current_time = rospy.get_time()
         elapsed_time = current_time - self.start_time
-        self.vel.linear.x = -0.1
+        self.vel.linear.x = -0.3
         self.cmd_vel_publisher.publish(self.vel)
         rospy.loginfo(elapsed_time)
         rospy.loginfo("back process")
-        if elapsed_time >= 15.0:
+        if elapsed_time >= 20.0:
             rospy.loginfo("elapsed_time ok")
             self.go_on_flag = False
             self.back_process_flag = False
@@ -236,7 +236,7 @@ class D1_node:
 
 if __name__ == '__main__':
     D1 = D1_node()
-    DURATION = 0.2
+    DURATION = 0.02
     r = rospy.Rate(1 / DURATION)
     while not rospy.is_shutdown():
         D1.loop()
