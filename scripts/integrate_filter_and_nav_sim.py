@@ -28,6 +28,10 @@ class D1_node:
         self.camera_send_control_commands_flag = False
         self.back_process_flag = True
         self.camera_send_control_commands_is_finished_flag = True
+        self.detected_full_flag = False
+        self.blue_box_approached = 0
+
+        self.flag_list = ["tag", "green_box", "blue_box", "tag_a", "tag_b", "tag_c"]
 
         self.vel = Twist()
         self.str = String()
@@ -45,9 +49,12 @@ class D1_node:
         self.string_subscriber = rospy.Subscriber('/detected_objects_in_image', BoundingBoxes, self.string_callback)
 
 
+
         self.start_time = None
         self.finish_flag_flag = True
         self.cmd_vel_publisher = rospy.Publisher('/cmd_vel', Twist, queue_size=1)
+
+
 
         self.label_publisher = rospy.Publisher('/label_string', String, queue_size=1)
         self.publisher_cmd_vel_by_camera = rospy.Subscriber('/detected_objects_in_image', BoundingBoxes, self.boundingBoxesCallback)
@@ -56,11 +63,31 @@ class D1_node:
         self.detect_box_ = rospy.Service("detect_box", SetBool, self.detect_box_srv)
     #     self.label_string_subscriber = rospy.Subscriber("/label_string", SetBool, self.label_string)
 
+
+
     def string_callback(self, data):
         self.labels = [bbox.Class for bbox in data.bounding_boxes]
-        # rospy.loginfo(self.labels)
+        # リストやタプルなどのイテラルオブジェクトの各要素を任意の変数名bboxで取り出してbbox.Classで評価して，その結果を要素とするあらたなリストが返される．
+
+        rospy.loginfo(self.labels)
+
+        if not self.labels:
+            rospy.loginfo("self.labels is empty")
+            self.detected_full_flag = False
+        #     if self.flag_list[0] == self.labels or self.flag_list[1] == self.labels or self.flag_list[2] in self.labels or self.flag_list[3] == self.labels or self.flag_list[4] == self.labels or self.flag_list[5] == self.labels:
+        #         # 上記の条件式で評価を行ったとき，"blue_box"では実行がされたがself.labelsで評価した時はできなかった．
+        #         rospy.loginfo("OKKKKKKKKKKKKKKKKKKKKK")
+        else:
+            rospy.loginfo("self.labels is full")
+            self.detected_full_flag = True
+
+        if self.flag_list[0] == self.labels or self.flag_list[1] == self.labels or self.flag_list[2] == self.labels or self.flag_list[3] == self.labels or self.flag_list[4] == self.labels or self.flag_list[5] == self.labels:
+            rospy.loginfo("OKKKKKKKKKKKKKKk")
+
         self.detected = bool(self.labels)
-        # rospy.loginfo(self.detected)
+        rospy.loginfo(self.detected)
+
+
 
     def label_string(self):
         self.label_string_count += 1
@@ -73,6 +100,7 @@ class D1_node:
         detection_msg.data = self.detected
         self.label_publisher.publish(label_msg)
         self.detected_publisher.publish(detection_msg)
+
         self.detect_result_client()
 
     def detect_box_srv(self, data):
@@ -124,8 +152,6 @@ class D1_node:
         rospy.loginfo("camera_send_control_commands")
         self.vel.linear.x = 0.2  # この行と次の行の動作指令値の与え方を変更する必要がある．具体的には一定以上の値になった時に動作指令値に制限をつける
         self.vel.angular.z = -float(self.position_error) / 1000
-        # rospy.loginfo("self.vel.linear.x: %f", self.vel.linear.x)
-        # rospy.loginfo("self.vel.angular.z: %f", self.vel.angular.z)
         rospy.loginfo(self.width>140)
         self.cmd_vel_publisher.publish(self.vel)
 
@@ -175,9 +201,7 @@ class D1_node:
             self.back_process_flag = False
             self.approached_box = False
             self.label_string_count = 1
-            # if self.finish_flag_flag:
-            #     self.finish_flag()
-            #     self.finish_flag_flag = False
+            self.blue_box_approached += 1
         else:
             rospy.loginfo("elapsed_time is false")
 
@@ -202,12 +226,9 @@ class D1_node:
 
     # Change to accept laser_scan_msg argument
     def loop(self):
+        rospy.loginfo(self.blue_box_approached)
         rospy.loginfo("D1_node started")
-        rospy.loginfo(self.label_msg2)
-        rospy.loginfo(self.detect_box)
-        rospy.loginfo(self.go_on_flag)
-        rospy.loginfo("aaaaaaaaaaaaaa")
-        if self.go_on_flag and self.detect_box:
+        if self.go_on_flag and self.detect_box and self.detected_full_flag and self.blue_box_approached < 2:
         # if self.width > 0:
         # Call lidar_send_control_commands with laser_scan_msg argument
             self.camera_send_control_commands() # Pass the appropriate laser_scan_msg
@@ -223,6 +244,26 @@ class D1_node:
                 self.lidar_send_control_commands()  # Pass the appropriate laser_scan_msg again
                 if self.approached_box:
                     rospy.loginfo("aaaaaaaaaaaaaa")
+                    self.back_process()
+                    if self.label_msg2 == 'blue_box':
+                        self.finish_flag()
+
+        if self.go_on_flag and self.detect_box and self.detected_full_flag and self.blue_box_approached == 1:
+            rospy.loginfo("going green_box")
+        # Call lidar_send_control_commands with laser_scan_msg argument
+            self.camera_send_control_commands() # Pass the appropriate laser_scan_msg
+            rospy.loginfo("bbbbbbbbbbbb")
+            # if self.label_string_count < 2 and self.detected:
+            rospy.loginfo(self.width)
+            rospy.loginfo(self.average_range)
+
+            if self.width > 140 or (self.width > 30 and self.average_range < 1.0) or self.average_range < 0.45:
+                if self.label_string_count < 2:
+                    self.label_string()
+                rospy.loginfo("bbbbbbbbbbbbbbb")
+                self.lidar_send_control_commands()  # Pass the appropriate laser_scan_msg again
+                if self.approached_box:
+                    rospy.loginfo("bbbbbbbbbbbbbbb")
                     self.back_process()
                     if self.label_msg2 == 'blue_box':
                         self.finish_flag()

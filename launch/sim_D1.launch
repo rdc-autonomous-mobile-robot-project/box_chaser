@@ -1,0 +1,8 @@
+<launch>
+  <node name="D1_node" pkg="box_chaser" type="integrate_filter_and_nav_sim.py" output="screen">
+  </node>
+  <node pkg="rosbag" type="play" name="play_bag" output="screen" args="--clock /home/neko/tmp/width_140.bag">
+  </node>
+  <include file="$(find orne_box_simulations)/launch/sim.launch">
+  </include>
+</launch>
