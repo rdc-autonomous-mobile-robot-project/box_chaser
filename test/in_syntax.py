@@ -226,27 +226,28 @@ class D1_node:
 
     # Change to accept laser_scan_msg argument
     def loop(self):
-        rospy.loginfo(self.blue_box_approached)
-        rospy.loginfo("D1_node started")
-        if self.go_on_flag and self.detect_box and self.detected_full_flag and self.blue_box_approached < 1:
-        # if self.width > 0:
-        # Call lidar_send_control_commands with laser_scan_msg argument
-            self.camera_send_control_commands() # Pass the appropriate laser_scan_msg
-            rospy.loginfo("aaaaaaaaaaaaaa")
-            # if self.label_string_count < 2 and self.detected:
-            rospy.loginfo(self.width)
-            rospy.loginfo(self.average_range)
+        # self.label_string()
+        # rospy.loginfo(self.blue_box_approached)
+        # rospy.loginfo("D1_node started")
+        # if self.go_on_flag and self.detect_box and self.detected_full_flag and self.blue_box_approached < 1:
+        # # if self.width > 0:
+        # # Call lidar_send_control_commands with laser_scan_msg argument
+        #     self.camera_send_control_commands() # Pass the appropriate laser_scan_msg
+        #     rospy.loginfo("aaaaaaaaaaaaaa")
+        #     # if self.label_string_count < 2 and self.detected:
+        #     rospy.loginfo(self.width)
+        #     rospy.loginfo(self.average_range)
 
-            if self.width > 140 or (self.width > 30 and self.average_range < 1.0) or self.average_range < 0.45:
-                if self.label_string_count < 2:
-                    self.label_string()
-                rospy.loginfo("aaaaaaaaaaaaaa")
-                self.lidar_send_control_commands()  # Pass the appropriate laser_scan_msg again
-                if self.approached_box:
-                    rospy.loginfo("aaaaaaaaaaaaaa")
-                    self.back_process()
-                    if self.label_msg2 == 'blue_box':
-                        self.finish_flag()
+        #     if self.width > 140 or (self.width > 30 and self.average_range < 1.0) or self.average_range < 0.45:
+        #         if self.label_string_count < 2:
+        #             self.label_string()
+        #         rospy.loginfo("aaaaaaaaaaaaaa")
+        #         self.lidar_send_control_commands()  # Pass the appropriate laser_scan_msg again
+        #         if self.approached_box:
+        #             rospy.loginfo("aaaaaaaaaaaaaa")
+        #             self.back_process()
+        #             if self.label_msg2 == 'blue_box':
+        #                 self.finish_flag()
 
         # if self.go_on_flag and self.detect_box and self.detected_full_flag and self.blue_box_approached == 1:
         # # if self.go_on_flag and self.detect_box and self.detected_full_flag and self.label_msg2 == 'blue_box':
