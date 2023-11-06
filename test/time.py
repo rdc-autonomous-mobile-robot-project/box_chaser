@@ -36,8 +36,7 @@ class D1_node:
         self.vel = Twist()
         self.str = String()
 
-        self.dist = 1.0
-        self.speed = 0.2
+
 
         self.detect_box_2 = False
 
@@ -186,29 +185,17 @@ class D1_node:
         rospy.loginfo(self.label_msg2)
         rospy.loginfo("back process")
         # rospy.loginfo("self.average_range: %f", self.average_range)
-        # if self.start_time is None:
-        #     self.start_time = rospy.get_time()
-        # else:
-        #     rospy.logwarn("start_time is false")
-        # current_time = rospy.get_time()
-        # elapsed_time = current_time - self.start_time
-        # self.vel.linear.x = -0.3
-        # self.cmd_vel_publisher.publish(self.vel)
-        # rospy.loginfo(elapsed_time)
+        if self.start_time is None:
+            self.start_time = rospy.get_time()
+        else:
+            rospy.logwarn("start_time is false")
+        current_time = rospy.get_time()
+        elapsed_time = current_time - self.start_time
+        self.vel.linear.x = -0.3
+        self.cmd_vel_publisher.publish(self.vel)
+        rospy.loginfo(elapsed_time)
         rospy.loginfo("back process")
-
-        self.target_time = self.dist / self.speed
-        self.vel.linear.x = - self.speed
-
-        # 開始の時刻を保存
-        start_time = time.time()
-        # 経過した時刻を取得
-        end_time = time.time()
-
-        while end_time - start_time <= self.target_time:
-            self.cmd_vel_publisher.publish(self.vel)
-            end_time = time.time()
-        if end_time >= 10.0:#ここのタイミングは要調整
+        if elapsed_time >= 20.0:
             rospy.loginfo("elapsed_time ok")
             self.go_on_flag = False
             self.back_process_flag = False
@@ -239,28 +226,28 @@ class D1_node:
 
     # Change to accept laser_scan_msg argument
     def loop(self):
-        rospy.loginfo(self.blue_box_approached)
-        rospy.loginfo("D1_node started")
-        if self.go_on_flag and self.detect_box and self.detected_full_flag and self.blue_box_approached < 1:
-        # if self.width > 0:
-        # Call lidar_send_control_commands with laser_scan_msg argument
-            self.camera_send_control_commands() # Pass the appropriate laser_scan_msg
-            rospy.loginfo("aaaaaaaaaaaaaa")
-            # if self.label_string_count < 2 and self.detected:
-            rospy.loginfo(self.width)
-            rospy.loginfo(self.average_range)
+        # self.label_string()
+        # rospy.loginfo(self.blue_box_approached)
+        # rospy.loginfo("D1_node started")
+        # if self.go_on_flag and self.detect_box and self.detected_full_flag and self.blue_box_approached < 1:
+        # # if self.width > 0:
+        # # Call lidar_send_control_commands with laser_scan_msg argument
+        #     self.camera_send_control_commands() # Pass the appropriate laser_scan_msg
+        #     rospy.loginfo("aaaaaaaaaaaaaa")
+        #     # if self.label_string_count < 2 and self.detected:
+        #     rospy.loginfo(self.width)
+        #     rospy.loginfo(self.average_range)
 
-            if self.width > 140 or (self.width > 30 and self.average_range < 1.0) or self.average_range < 0.45:
-                if self.label_string_count < 2:
-                    self.label_string()
-                rospy.loginfo("aaaaaaaaaaaaaa")
-                self.lidar_send_control_commands()  # Pass the appropriate laser_scan_msg again
-                rospy.loginfo(self.approached_box)
-                if self.approached_box:
-                    rospy.loginfo("aaaaaaaaaaaaaa")
-                    self.back_process()
-                    if self.label_msg2 == 'blue_box':
-                        self.finish_flag()
+        #     if self.width > 140 or (self.width > 30 and self.average_range < 1.0) or self.average_range < 0.45:
+        #         if self.label_string_count < 2:
+        #             self.label_string()
+        #         rospy.loginfo("aaaaaaaaaaaaaa")
+        #         self.lidar_send_control_commands()  # Pass the appropriate laser_scan_msg again
+        #         if self.approached_box:
+        #             rospy.loginfo("aaaaaaaaaaaaaa")
+        #             self.back_process()
+        #             if self.label_msg2 == 'blue_box':
+        #                 self.finish_flag()
 
         # if self.go_on_flag and self.detect_box and self.detected_full_flag and self.blue_box_approached == 1:
         # # if self.go_on_flag and self.detect_box and self.detected_full_flag and self.label_msg2 == 'blue_box':
