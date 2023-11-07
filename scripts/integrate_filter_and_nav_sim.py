@@ -249,7 +249,6 @@ class D1_node:
             # if self.label_string_count < 2 and self.detected:
             rospy.loginfo(self.width)
             rospy.loginfo(self.average_range)
-
             if self.width > 140 or (self.width > 30 and self.average_range < 1.0) or self.average_range < 0.45:
                 if self.label_string_count < 2:
                     self.label_string()
@@ -259,8 +258,6 @@ class D1_node:
                 if self.approached_box:
                     rospy.loginfo("aaaaaaaaaaaaaa")
                     self.back_process()
-                    if self.label_msg2 == 'blue_box':
-                        self.finish_flag()
 
         # if self.go_on_flag and self.detect_box and self.detected_full_flag and self.blue_box_approached == 1:
         # # if self.go_on_flag and self.detect_box and self.detected_full_flag and self.label_msg2 == 'blue_box':
@@ -273,7 +270,6 @@ class D1_node:
             # if self.label_string_count < 2 and self.detected:
             rospy.loginfo(self.width)
             rospy.loginfo(self.average_range)
-
             if self.width > 140 or (self.width > 30 and self.average_range < 1.0) or self.average_range < 0.45:
                 if self.label_string_count < 2:
                     self.label_string()
