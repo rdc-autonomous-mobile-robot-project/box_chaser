@@ -185,17 +185,6 @@ class D1_node:
     def back_process(self):#現在の構成では，規定の時間後退するわけではなく2~3秒後退する状況となっている．
         rospy.loginfo(self.label_msg2)
         rospy.loginfo("back process")
-        # rospy.loginfo("self.average_range: %f", self.average_range)
-        # if self.start_time is None:
-        #     self.start_time = rospy.get_time()
-        # else:
-        #     rospy.logwarn("start_time is false")
-        # current_time = rospy.get_time()
-        # elapsed_time = current_time - self.start_time
-        # self.vel.linear.x = -0.3
-        # self.cmd_vel_publisher.publish(self.vel)
-        # rospy.loginfo(elapsed_time)
-        rospy.loginfo("back process")
 
         self.target_time = self.dist / self.speed
         self.vel.linear.x = - self.speed
