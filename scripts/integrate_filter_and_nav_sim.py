@@ -49,13 +49,9 @@ class D1_node:
         self.detected_publisher = rospy.Publisher('/detection_status', Bool, queue_size=10)
         self.string_subscriber = rospy.Subscriber('/detected_objects_in_image', BoundingBoxes, self.string_callback)
 
-
-
         self.start_time = None
         self.finish_flag_flag = True
         self.cmd_vel_publisher = rospy.Publisher('/cmd_vel', Twist, queue_size=1)
-
-
 
         self.label_publisher = rospy.Publisher('/label_string', String, queue_size=1)
         self.publisher_cmd_vel_by_camera = rospy.Subscriber('/detected_objects_in_image', BoundingBoxes, self.boundingBoxesCallback)
@@ -64,31 +60,20 @@ class D1_node:
         self.detect_box_ = rospy.Service("detect_box", SetBool, self.detect_box_srv)
     #     self.label_string_subscriber = rospy.Subscriber("/label_string", SetBool, self.label_string)
 
-
-
     def string_callback(self, data):
         self.labels = [bbox.Class for bbox in data.bounding_boxes]
         # リストやタプルなどのイテラルオブジェクトの各要素を任意の変数名bboxで取り出してbbox.Classで評価して，その結果を要素とするあらたなリストが返される．
-
         rospy.loginfo(self.labels)
-
         if not self.labels:
             rospy.loginfo("self.labels is empty")
             self.detected_full_flag = False
-        #     if self.flag_list[0] == self.labels or self.flag_list[1] == self.labels or self.flag_list[2] in self.labels or self.flag_list[3] == self.labels or self.flag_list[4] == self.labels or self.flag_list[5] == self.labels:
-        #         # 上記の条件式で評価を行ったとき，"blue_box"では実行がされたがself.labelsで評価した時はできなかった．
-        #         rospy.loginfo("OKKKKKKKKKKKKKKKKKKKKK")
         else:
             rospy.loginfo("self.labels is full")
             self.detected_full_flag = True
-
         if self.flag_list[0] == self.labels or self.flag_list[1] == self.labels or self.flag_list[2] == self.labels or self.flag_list[3] == self.labels or self.flag_list[4] == self.labels or self.flag_list[5] == self.labels:
             rospy.loginfo("OKKKKKKKKKKKKKKk")
-
         self.detected = bool(self.labels)
         rospy.loginfo(self.detected)
-
-
 
     def label_string(self):
         self.label_string_count += 1
