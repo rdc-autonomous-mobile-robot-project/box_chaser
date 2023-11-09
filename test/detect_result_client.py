@@ -65,23 +65,15 @@ class D1_node:
     # #     self.label_string_subscriber = rospy.Subscriber("/label_string", SetBool, self.label_string)
 
     def detect_result_client(self):
-        if self.start_time is None:
-            self.start_time = rospy.get_time()
-        else:
-            rospy.logwarn("start_time is false")
-        self.current_time = rospy.get_time()
-        self.elapsed_time = self.current_time - self.start_time
-        rospy.loginfo("elapsed_time: %f", self.elapsed_time)
-        if self.elapsed_time >= 5.0:
-            rospy.wait_for_service('detect_result')
-            try:
-                service_call = rospy.ServiceProxy('detect_result', SetBool)
-                service_call(True)
-                rospy.loginfo("finish detect_result")
-            except rospy.ServiceException as e:
-                print ("Service call failed: %s" % e)
-        else:
-            rospy.loginfo("elapsed_time is false")
+        rospy.wait_for_service('detect_result')
+        try:
+            service_call = rospy.ServiceProxy('detect_result', SetBool)
+            service_call(True)
+            rospy.loginfo("finish detect_result")
+        except rospy.ServiceException as e:
+            print ("Service call failed: %s" % e)
+
+
 
     # Change to accept laser_scan_msg argument
     def loop(self):
