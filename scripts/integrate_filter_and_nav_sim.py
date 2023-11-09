@@ -59,7 +59,6 @@ class D1_node:
         self.laser_scan_subscriber = rospy.Subscriber('/scan', LaserScan, self.laserscanCallback)
         self.detect_box_ = rospy.Service("detect_box", SetBool, self.detect_box_srv)
         self.detect_result_client_func = rospy.ServiceProxy('detect_result', SetBool)
-    #     self.label_string_subscriber = rospy.Subscriber("/label_string", SetBool, self.label_string)
 
     def string_callback(self, data):
         self.labels = [bbox.Class for bbox in data.bounding_boxes]
@@ -113,7 +112,6 @@ class D1_node:
             print("Service call failed: %s" % e)
 
     def boundingBoxesCallback(self, msg):
-        # rospy.loginfo("boundingBoxesCallback")
         for box in msg.bounding_boxes:
             if box.Class in ["tag", "green_box", "blue_box", "tag_a", "tag_b", "tag_c"]:
                 xmin = box.xmin
@@ -193,14 +191,6 @@ class D1_node:
             rospy.loginfo("elapsed_time is false")
 
     def detect_result_client(self):
-        # if self.start_time is None:
-        #     self.start_time = rospy.get_time()
-        # else:
-        #     rospy.logwarn("start_time is false")
-        # self.current_time = rospy.get_time()
-        # self.elapsed_time = self.current_time - self.start_time
-        # rospy.loginfo("elapsed_time: %f", self.elapsed_time)
-        # if self.elapsed_time >= 10.0:
         rospy.wait_for_service('detect_result')
         try:
             service_call = rospy.ServiceProxy('detect_result', SetBool)
@@ -208,8 +198,6 @@ class D1_node:
             rospy.loginfo("finish detect_result")
         except rospy.ServiceException as e:
             print ("Service call failed: %s" % e)
-    # else:
-    #     rospy.loginfo("elapsed_time is false")
 
     # Change to accept laser_scan_msg argument
     def loop(self):
@@ -218,8 +206,6 @@ class D1_node:
         rospy.loginfo(self.labels)
         rospy.loginfo("D1_node started")
         if self.go_on_flag and self.detect_box and self.detected_full_flag and self.green_box_approached < 1:
-        # if self.width > 0:
-        # Call lidar_send_control_commands with laser_scan_msg argument
             self.camera_send_control_commands() # Pass the appropriate laser_scan_msg
             rospy.loginfo("aaaaaaaaaaaaaa")
             # if self.label_string_count < 2 and self.detected:
