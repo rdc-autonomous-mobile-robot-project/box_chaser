@@ -10,19 +10,24 @@ from std_msgs.msg import Header, String, Bool
 class D1_node:
     def __init__(self):
         rospy.init_node('D1_node', anonymous=True)
+
+        #画像用の初期化
         self.position_error = 0.0
         self.width = 0.0
+        self.flag_list = ["tag", "green_box", "blue_box", "tag_a", "tag_b", "tag_c"]
+
+        #レーザスキャン用の初期化
         self.average_range = 0.0
         self.desired_distance = 0.45
+
+        #フラグの初期化
         self.start_time = None
         self.go_on_flag = True
 
         self.flag_desired_distance = True
         self.approached_box = False
         self.detect_box = False
-        self.wait_process_start_time = None
-        self.wait_process_current_time = 0
-        self.wait_process_elapsed_time = 0
+
         self.time = 0
         self.finish_camera_forward_process_flag = False
         self.camera_send_control_commands_flag = False
@@ -30,8 +35,6 @@ class D1_node:
         self.camera_send_control_commands_is_finished_flag = True
         self.detected_full_flag = False
         self.green_box_approached = 0
-
-        self.flag_list = ["tag", "green_box", "blue_box", "tag_a", "tag_b", "tag_c"]
 
         self.vel = Twist()
         self.str = String()
