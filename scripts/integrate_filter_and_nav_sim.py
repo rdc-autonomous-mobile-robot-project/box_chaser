@@ -58,6 +58,7 @@ class D1_node:
         self.calculate_bbox_width = rospy.Subscriber('/detected_objects_in_image', BoundingBoxes, self.calculate_xmax_xmin)
         self.laser_scan_subscriber = rospy.Subscriber('/scan', LaserScan, self.laserscanCallback)
         self.detect_box_ = rospy.Service("detect_box", SetBool, self.detect_box_srv)
+        self.detect_result_client_server = rospy.ServiceProxy('detect_result', SetBool)
     #     self.label_string_subscriber = rospy.Subscriber("/label_string", SetBool, self.label_string)
 
     def string_callback(self, data):
@@ -86,8 +87,7 @@ class D1_node:
         detection_msg.data = self.detected
         self.label_publisher.publish(label_msg)
         self.detected_publisher.publish(detection_msg)
-
-        self.detect_result_client()
+        # self.detect_result_client()
 
     def detect_box_srv(self, data):
         rospy.loginfo("detect_box_srv")
@@ -188,7 +188,7 @@ class D1_node:
             self.back_process_flag = False
             self.approached_box = False
             self.label_string_count = 1
-            self.blue_box_approached += 1
+            # self.blue_box_approached += 1#名前が不適切
         else:
             rospy.loginfo("elapsed_time is false")
 
@@ -226,16 +226,18 @@ class D1_node:
             if self.width > 140 or (self.width > 30 and self.average_range < 1.0) or self.average_range < 0.45:
                 if self.label_string_count < 2:
                     self.label_string()
+                    self.detect_result_client()
                 rospy.loginfo("aaaaaaaaaaaaaa")
                 self.lidar_send_control_commands()  # Pass the appropriate laser_scan_msg again
                 rospy.loginfo(self.approached_box)
                 if self.approached_box:
                     rospy.loginfo("aaaaaaaaaaaaaa")
+                    # self.blue_box_approached += 1
                     self.back_process()
 
         # if self.go_on_flag and self.detect_box and self.detected_full_flag and self.blue_box_approached == 1:
         # # if self.go_on_flag and self.detect_box and self.detected_full_flag and self.label_msg2 == 'blue_box':
-        if self.go_on_flag and self.detect_box and self.detected_full_flag and 'blue_box' in self.labels:
+        if self.go_on_flag and self.detect_box and self.detected_full_flag and 'blue_box' in self.labels:#ここにもカウンタを足す必要がある
             #green_box_detectフラグを条件に変更したほうが良い
             rospy.loginfo("going green_box")
         # Call lidar_send_control_commands with laser_scan_msg argument
