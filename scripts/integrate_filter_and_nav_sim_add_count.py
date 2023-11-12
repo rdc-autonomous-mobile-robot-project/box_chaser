@@ -290,7 +290,7 @@ class D1_node:
                     # if self.label_msg2 == 'blue_box':
                     if 'blue_box' in self.labels:
                         self.finish_flag()
-                        
+                        rospy.signal_shutdown('finish')
 
 if __name__ == '__main__':
     D1 = D1_node()
