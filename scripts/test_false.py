@@ -75,6 +75,8 @@ class D1_node:
         self.detect_box_called_count = 0
 
         self.green_box_process_finished = False
+        self.time_counter = 0
+        self.send_detect_result_false_counter = 0
 
 
     def label_string_publisher(self, max_tag):
@@ -255,8 +257,6 @@ class D1_node:
         except rospy.ServiceException as e:
             print ("Service call failed: %s" % e)
 
-
-
     # Change to accept laser_scan_msg argument
     def loop(self):
         rospy.loginfo(self.label_string_count)
@@ -266,7 +266,12 @@ class D1_node:
         rospy.loginfo("D1_node started")
 
         if self.go_on_flag and self.detect_box and (not self.green_box_process_finished):
-            if self.detected_full_flag and self.green_box_approached < 1 and 'green_box' in self.labels:
+            if self.time_counter >= 29 and self.send_detect_result_false_counter < 1:
+                self.send_detect_result_false_counter += 1
+                self.detect_result_client_false()
+            if self.detected_full_flag and self.green_box_approached < 1 and 'green_box' in self.labels and self.time_counter <= 30:
+                self.time_counter += DURATION
+                rospy.loginfo(self.time_counter)
                 self.camera_send_control_commands() # Pass the appropriate laser_scan_msg
                 rospy.loginfo("aaaaaaaaaaaaaa")
                 # if self.label_string_count < 2 and self.detected:
