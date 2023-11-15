@@ -1,3 +1,10 @@
 <launch>
-  <node name="D1_node" pkg="robot_follow_line" type="sub_bbox_2dlidar.py" output="screen"></node>
+  <node name="D1_node" pkg="box_chaser" type="test_false.py" output="screen"></node>
+  <node name="usb_cam" pkg="usb_cam" type="usb_cam_node" output="screen">
+    <param name="video_device" value="/dev/video4"/>
+  </node>
+ 
+  <include file="$(find yolov5_pytorch_ros)/launch/detector_forusbcam_s_8_350.launch">
+  </include>
+ 
 </launch>
