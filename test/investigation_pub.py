@@ -54,12 +54,12 @@ class D1_node:
 
         self.start_time = None
         self.finish_flag_flag = True
-        self.cmd_vel_publisher = rospy.Publisher('/cmd_vel', Twist, queue_size=1)
+        self.cmd_vel_publisher = rospy.Publisher('/yolo_vel', Twist, queue_size=1)
 
         self.label_publisher = rospy.Publisher('/label_string', String, queue_size=1)
         self.publisher_cmd_vel_by_camera = rospy.Subscriber('/detected_objects_in_image', BoundingBoxes, self.boundingBoxesCallback)
         self.calculate_bbox_width = rospy.Subscriber('/detected_objects_in_image', BoundingBoxes, self.calculate_xmax_xmin)
-        self.laser_scan_subscriber = rospy.Subscriber('/scan', LaserScan, self.laserscanCallback)
+        self.laser_scan_subscriber = rospy.Subscriber('/low_scan', LaserScan, self.laserscanCallback)
         self.detect_box_ = rospy.Service("detect_box", SetBool, self.detect_box_srv)
         self.detect_result_client_func = rospy.ServiceProxy('detect_result', SetBool)
 
@@ -72,10 +72,14 @@ class D1_node:
         self.tag_b_count = 0
         self.tag_c_count = 0
 
+        self.detect_box_called_count = 0
+
+        self.green_box_process_finished = False
 
 
     def label_string_publisher(self, max_tag):
-        self.label_publisher.publish(max_tag)
+        pass
+        # self.label_publisher.publish(max_tag)
 
     def get_max_tag(self):
         if self.max_count == self.tag_a_count:
@@ -133,6 +137,7 @@ class D1_node:
 
     def detect_box_srv(self, data):
         rospy.loginfo("detect_box_srv")
+        self.detect_box_called_count += 1
         resp = SetBoolResponse()
         if data.data:
             resp.message = "called"
@@ -242,55 +247,85 @@ class D1_node:
         except rospy.ServiceException as e:
             print ("Service call failed: %s" % e)
 
+    def detect_result_client_false(self):
+        rospy.wait_for_service('detect_result')
+        try:
+            service_call = rospy.ServiceProxy('detect_result', SetBool)
+            service_call(False)
+            rospy.loginfo("finish detect_result")
+        except rospy.ServiceException as e:
+            print ("Service call failed: %s" % e)
+
+
+
     # Change to accept laser_scan_msg argument
     def loop(self):
         rospy.loginfo(self.label_string_count)
         rospy.loginfo(self.green_box_approached)
         rospy.loginfo(self.labels)
+        rospy.loginfo("self.detect_box_called_count: %f",self.detect_box_called_count)
         rospy.loginfo("D1_node started")
-        if self.go_on_flag and self.detect_box and self.detected_full_flag and self.green_box_approached < 1 and 'green_box' in self.labels:
-            self.camera_send_control_commands() # Pass the appropriate laser_scan_msg
-            rospy.loginfo("aaaaaaaaaaaaaa")
-            # if self.label_string_count < 2 and self.detected:
-            rospy.loginfo(self.width)
-            rospy.loginfo(self.average_range)
-            if self.width > 140 or (self.width > 30 and self.average_range < 1.0) or self.average_range < 0.45:
-                if self.label_string_count < 1:#ここは本来二つカウンタを設ける必要がある．
-                    self.label_string_publisher(self.get_max_tag())#この行は未検証
-                    self.label_string()
-                    self.detect_result_client()
+
+        if self.go_on_flag and self.detect_box and (not self.green_box_process_finished):
+            if self.detected_full_flag and self.green_box_approached < 1 and 'green_box' in self.labels:
+                self.camera_send_control_commands() # Pass the appropriate laser_scan_msg
                 rospy.loginfo("aaaaaaaaaaaaaa")
-                self.lidar_send_control_commands()  # Pass the appropriate laser_scan_msg again
-                rospy.loginfo(self.approached_box)
-                if self.approached_box:
-                    rospy.loginfo("aaaaaaaaaaaaaa")
-                    # self.green_box_approached += 1
-                    self.back_process()
+                # if self.label_string_count < 2 and self.detected:
+                rospy.loginfo(self.width)
+                rospy.loginfo(self.average_range)
+                if self.width > 140 or (self.width > 30 and self.average_range < 1.0) or self.average_range < 0.45:
+                    if self.label_string_count < 1:#ここは本来二つカウンタを設ける必要がある．
+                        self.label_string_publisher(self.get_max_tag())#この行は未検証
+                        self.label_string()
+                        self.detect_result_client()
+                    rospy.loginfo("bbbbbbbbbbbbbbb")
+                    self.lidar_send_control_commands()  # Pass the appropriate laser_scan_msg again
+                    rospy.loginfo(self.approached_box)
+                    if self.approached_box:
+                        rospy.loginfo("ccccccccccccc")
+                        # self.green_box_approached += 1
+                        self.back_process()
+                        self.green_box_process_finished = True
+        else:
+            rospy.loginfo("first step: detect_box is false")
 
         # if self.go_on_flag and self.detect_box and self.detected_full_flag and self.blue_box_approached == 1:
         # if self.go_on_flag and self.detect_box and self.detected_full_flag and self.label_msg2 == 'blue_box':
-        if self.go_on_flag and self.detect_box and self.detected_full_flag and 'blue_box' in self.labels:#ここにもカウンタを足す必要がある#detect_full_flagも削る必要がある
-            #green_box_detectフラグを条件に変更したほうが良い
-            rospy.loginfo("going green_box")
-        # Call lidar_send_control_commands with laser_scan_msg argument
-            self.camera_send_control_commands() # Pass the appropriate laser_scan_msg
-            rospy.loginfo("bbbbbbbbbbbb")
-            # if self.label_string_count < 2 and self.detected:
-            rospy.loginfo(self.width)
-            rospy.loginfo(self.average_range)
-            if self.width > 140 or (self.width > 30 and self.average_range < 1.0) or self.average_range < 0.45:
-                if self.label_string_count < 1:#２つ目のカウンタが必要
-                    self.label_string_publisher(self.get_max_tag())#この行は未検証
-                    self.label_string()
-                rospy.loginfo("bbbbbbbbbbbbbbb")
-                self.lidar_send_control_commands()  # Pass the appropriate laser_scan_msg again
-                if self.approached_box:
-                    rospy.loginfo("bbbbbbbbbbbbbbb")
-                    self.back_process()
-                    # if self.label_msg2 == 'blue_box':
-                    if 'blue_box' in self.labels:
-                        self.finish_flag()
-                        
+        if self.go_on_flag and self.detect_box and self.green_box_process_finished:
+            if self.detected_full_flag and 'blue_box' in self.labels:#ここにもカウンタを足す必要がある#detect_full_flagも削る必要がある
+                #green_box_detectフラグを条件に変更したほうが良い
+                rospy.loginfo("going green_box")
+            # Call lidar_send_control_commands with laser_scan_msg argument
+                self.camera_send_control_commands() # Pass the appropriate laser_scan_msg
+                rospy.loginfo("dddddddddddddd")
+                # if self.label_string_count < 2 and self.detected:
+                rospy.loginfo(self.width)
+                rospy.loginfo(self.average_range)
+                if self.width > 140 or (self.width > 30 and self.average_range < 1.0) or self.average_range < 0.45:
+                    if self.label_string_count < 1:#２つ目のカウンタが必要
+                        self.label_string_publisher(self.get_max_tag())#この行は未検証
+                        self.label_string()
+                        self.detect_result_client()
+                    rospy.loginfo("eeeeeeeeeeeeee")
+                    self.lidar_send_control_commands()  # Pass the appropriate laser_scan_msg again
+                    if self.approached_box:
+                        rospy.loginfo("fffffffffffff")
+                        self.back_process()
+                        # if self.label_msg2 == 'blue_box':
+                        if 'blue_box' in self.labels:
+                            self.finish_flag()
+                            rospy.signal_shutdown('finish')
+            elif 'blue_box' not in self.labels:
+                rospy.sleep(15.0)
+                if self.detect_box_called_count > 2:
+                    self.detect_result_client_false()
+            # elif self.detect_box_called_count > 2:
+            #     self.detect_result_client_false()
+            else:
+                rospy.loginfo("second step: detect_box is false")
+        else:
+            rospy.loginfo("second step: detect_box is false")
+
 
 if __name__ == '__main__':
     D1 = D1_node()

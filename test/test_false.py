@@ -315,7 +315,7 @@ class D1_node:
                             self.finish_flag()
                             rospy.signal_shutdown('finish')
             elif 'blue_box' not in self.labels:
-                rospy.sleep(10.0)
+                rospy.sleep(15.0)
                 if self.detect_box_called_count > 2:
                     self.detect_result_client_false()
             # elif self.detect_box_called_count > 2:
