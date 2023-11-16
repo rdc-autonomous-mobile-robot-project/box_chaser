@@ -78,6 +78,8 @@ class D1_node:
         self.time_counter = 0
         self.send_detect_result_false_counter = 0
 
+        self.green_box_continue_time_counter = 0
+        self.blue_box_continue_time_counter = 0
 
     def label_string_publisher(self, max_tag):
         self.label_publisher.publish(max_tag)
@@ -277,7 +279,7 @@ class D1_node:
                 # if self.label_string_count < 2 and self.detected:
                 rospy.loginfo(self.width)
                 rospy.loginfo(self.average_range)
-                if self.width > 140 or (self.width > 30 and self.average_range < 1.0) or self.average_range < 0.45:
+                if self.width > 140 or (self.width > 30 and self.average_range < 1.0):
                     if self.label_string_count < 1:#ここは本来二つカウンタを設ける必要がある．
                         self.label_string_publisher(self.get_max_tag())#この行は未検証
                         self.label_string()
@@ -311,7 +313,7 @@ class D1_node:
                 # if self.label_string_count < 2 and self.detected:
                 rospy.loginfo(self.width)
                 rospy.loginfo(self.average_range)
-                if self.width > 140 or (self.width > 30 and self.average_range < 2.0) or self.average_range < 1.45:
+                if self.width > 140 or (self.width > 30 and self.average_range < 1.0):
                     if self.label_string_count < 1:#２つ目のカウンタが必要
                         self.label_string_publisher(self.get_max_tag())#この行は未検証
                         self.label_string()
