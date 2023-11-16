@@ -63,6 +63,53 @@ class D1_node:
         self.detect_box_ = rospy.Service("detect_box", SetBool, self.detect_box_srv)
         self.detect_result_client_func = rospy.ServiceProxy('detect_result', SetBool)
 
+
+        #count_tags用変数
+        self.max_count = 0
+
+        self.count_tags_sub = rospy.Subscriber('/detected_objects_in_image', BoundingBoxes, self.count_tags)
+        self.tag_a_count = 0
+        self.tag_b_count = 0
+        self.tag_c_count = 0
+
+        self.detect_box_called_count = 0
+
+        self.green_box_process_finished = False
+        self.time_counter = 0
+        self.send_detect_result_false_counter = 0
+
+        self.green_box_continue_time_counter = 0
+        self.blue_box_continue_time_counter = 0
+
+    def label_string_publisher(self, max_tag):
+        self.label_publisher.publish(max_tag)
+
+    def get_max_tag(self):
+        if self.max_count == self.tag_a_count:
+            return 'tag_a'
+        elif self.max_count == self.tag_b_count:
+            return 'tag_b'
+        elif self.max_count == self.tag_c_count:
+            return 'tag_c'
+        else:
+            return 'tag_c'  # カウントが全て同じ場合など
+
+    def count_tags(self, data):
+        rospy.loginfo("count_tags started")
+        self.labels = [bbox.Class for bbox in data.bounding_boxes]
+        if 'tag_a' in self.labels:
+            self.tag_a_count += 1
+        if 'tag_b' in self.labels:
+            self.tag_b_count += 1
+        if 'tag_c' in self.labels:
+            self.tag_c_count += 1
+        rospy.loginfo("tag_a_count: {}, tag_b_count: {}, tag_c_count: {}".format(self.tag_a_count, self.tag_b_count, self.tag_c_count))
+        self.max_count = max(self.tag_a_count, self.tag_b_count, self.tag_c_count)
+        # self.label_publisher.publish(self.get_max_tag())
+        rospy.loginfo("Max Count: {}".format(self.max_count))
+
+
+
     def string_callback(self, data):
         self.labels = [bbox.Class for bbox in data.bounding_boxes]
         # リストやタプルなどのイテラルオブジェクトの各要素を任意の変数名bboxで取り出してbbox.Classで評価して，その結果を要素とするあらたなリストが返される．
@@ -87,12 +134,13 @@ class D1_node:
         self.label_msg2 = label_str
         detection_msg = Bool()
         detection_msg.data = self.detected
-        self.label_publisher.publish(label_msg)
+        # self.label_publisher.publish(label_msg)
         self.detected_publisher.publish(detection_msg)
         # self.detect_result_client()
 
     def detect_box_srv(self, data):
         rospy.loginfo("detect_box_srv")
+        self.detect_box_called_count += 1
         resp = SetBoolResponse()
         if data.data:
             resp.message = "called"
@@ -202,53 +250,94 @@ class D1_node:
         except rospy.ServiceException as e:
             print ("Service call failed: %s" % e)
 
+    def detect_result_client_false(self):
+        rospy.wait_for_service('detect_result')
+        try:
+            service_call = rospy.ServiceProxy('detect_result', SetBool)
+            service_call(False)
+            rospy.loginfo("finish detect_result")
+        except rospy.ServiceException as e:
+            print ("Service call failed: %s" % e)
+
     # Change to accept laser_scan_msg argument
     def loop(self):
         rospy.loginfo(self.label_string_count)
         rospy.loginfo(self.green_box_approached)
         rospy.loginfo(self.labels)
+        rospy.loginfo("self.detect_box_called_count: %f",self.detect_box_called_count)
         rospy.loginfo("D1_node started")
-        if self.go_on_flag and self.detect_box and self.detected_full_flag and self.green_box_approached < 1 and 'green_box' in self.labels:
-            self.camera_send_control_commands() # Pass the appropriate laser_scan_msg
-            rospy.loginfo("aaaaaaaaaaaaaa")
-            # if self.label_string_count < 2 and self.detected:
-            rospy.loginfo(self.width)
-            rospy.loginfo(self.average_range)
-            if self.width > 140 or (self.width > 30 and self.average_range < 1.0) or self.average_range < 0.45:
-                if self.label_string_count < 1:#ここは本来二つカウンタを設ける必要がある．
-                    self.label_string()
-                    self.detect_result_client()
+
+        if self.go_on_flag and self.detect_box and (not self.green_box_process_finished):
+            if self.time_counter >= 29 and self.send_detect_result_false_counter < 1:
+                self.send_detect_result_false_counter += 1
+                self.detect_result_client_false()
+            if self.detected_full_flag and self.green_box_approached < 1 and 'green_box' in self.labels and self.time_counter <= 30:
+                self.time_counter += DURATION
+                rospy.loginfo(self.time_counter)
+                self.camera_send_control_commands() # Pass the appropriate laser_scan_msg
                 rospy.loginfo("aaaaaaaaaaaaaa")
-                self.lidar_send_control_commands()  # Pass the appropriate laser_scan_msg again
-                rospy.loginfo(self.approached_box)
-                if self.approached_box:
-                    rospy.loginfo("aaaaaaaaaaaaaa")
-                    # self.green_box_approached += 1
-                    self.back_process()
+                # if self.label_string_count < 2 and self.detected:
+                rospy.loginfo(self.width)
+                rospy.loginfo(self.average_range)
+                if self.width > 140 or (self.width > 30 and self.average_range < 1.0):
+                    if self.label_string_count < 1:#ここは本来二つカウンタを設ける必要がある．
+                        self.label_string_publisher(self.get_max_tag())#この行は未検証
+                        self.label_string()
+                        self.detect_result_client()
+                    rospy.loginfo("bbbbbbbbbbbbbbb")
+                    self.lidar_send_control_commands()  # Pass the appropriate laser_scan_msg again
+                    rospy.loginfo(self.approached_box)
+                    if self.approached_box:
+                        rospy.loginfo("ccccccccccccc")
+                        # self.green_box_approached += 1
+                        self.back_process()
+                        self.green_box_process_finished = True
+        else:
+            rospy.loginfo("first step: detect_box is false")
 
         # if self.go_on_flag and self.detect_box and self.detected_full_flag and self.blue_box_approached == 1:
         # if self.go_on_flag and self.detect_box and self.detected_full_flag and self.label_msg2 == 'blue_box':
-        if self.go_on_flag and self.detect_box and self.detected_full_flag and 'blue_box' in self.labels:#ここにもカウンタを足す必要がある#detect_full_flagも削る必要がある
-            #green_box_detectフラグを条件に変更したほうが良い
-            rospy.loginfo("going green_box")
-        # Call lidar_send_control_commands with laser_scan_msg argument
-            self.camera_send_control_commands() # Pass the appropriate laser_scan_msg
-            rospy.loginfo("bbbbbbbbbbbb")
-            # if self.label_string_count < 2 and self.detected:
-            rospy.loginfo(self.width)
-            rospy.loginfo(self.average_range)
-            if self.width > 140 or (self.width > 30 and self.average_range < 1.0) or self.average_range < 0.45:
-                if self.label_string_count < 1:#２つ目のカウンタが必要
-                    self.label_string()
-                rospy.loginfo("bbbbbbbbbbbbbbb")
-                self.lidar_send_control_commands()  # Pass the appropriate laser_scan_msg again
-                if self.approached_box:
-                    rospy.loginfo("bbbbbbbbbbbbbbb")
-                    self.back_process()
-                    # if self.label_msg2 == 'blue_box':
-                    if 'blue_box' in self.labels:
-                        self.finish_flag()
-                        
+        if self.go_on_flag and self.detect_box and self.green_box_process_finished:
+            rospy.loginfo(self.blue_box_continue_time_counter)
+            if  not ('blue_box' in self.labels):
+                self.blue_box_continue_time_counter += DURATION
+                rospy.loginfo("blue_box_continue_time_counter: %f",self.blue_box_continue_time_counter)
+            elif 'blue_box' in self.labels:
+                self.blue_box_continue_time_counter = 0
+            if self.detected_full_flag and 'blue_box' in self.labels or self.blue_box_continue_time_counter <= 30:
+                #green_box_detectフラグを条件に変更したほうが良い
+                rospy.loginfo("going green_box")
+            # Call lidar_send_control_commands with laser_scan_msg argument
+                self.camera_send_control_commands() # Pass the appropriate laser_scan_msg
+                rospy.loginfo("dddddddddddddd")
+                # if self.label_string_count < 2 and self.detected:
+                rospy.loginfo(self.width)
+                rospy.loginfo(self.average_range)
+                if self.width > 140 or (self.width > 30 and self.average_range < 1.0):
+                    if self.label_string_count < 1:#２つ目のカウンタが必要
+                        self.label_string_publisher(self.get_max_tag())#この行は未検証
+                        self.label_string()
+                        self.detect_result_client()
+                    rospy.loginfo("eeeeeeeeeeeeee")
+                    self.lidar_send_control_commands()  # Pass the appropriate laser_scan_msg again
+                    if self.approached_box:
+                        rospy.loginfo("fffffffffffff")
+                        self.back_process()
+                        # if self.label_msg2 == 'blue_box':
+                        if 'blue_box' in self.labels:
+                            self.finish_flag()
+                            rospy.signal_shutdown('finish')
+            elif 'blue_box' not in self.labels:
+                rospy.sleep(15.0)
+                if self.detect_box_called_count > 2:
+                    self.detect_result_client_false()
+            # elif self.detect_box_called_count > 2:
+            #     self.detect_result_client_false()
+            else:
+                rospy.loginfo("second step: detect_box is false")
+        else:
+            rospy.loginfo("second step: detect_box is false")
+
 
 if __name__ == '__main__':
     D1 = D1_node()
