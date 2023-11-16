@@ -78,6 +78,9 @@ class D1_node:
         self.green_box_process_finished = False
         self.send_detect_result_false_counter =0
 
+        self.green_box_continue_time_counter = 0
+        self.blue_box_continue_time_counter = 0
+
     def label_string_publisher(self, max_tag):
         self.label_publisher.publish(max_tag)
 
@@ -270,7 +273,10 @@ class D1_node:
             if self.time_counter >= 29 and self.send_detect_result_false_counter < 1:
                 self.send_detect_result_false_counter += 1
                 self.detect_result_client_false()
-            if self.detected_full_flag and self.green_box_approached < 1 and 'green_box' in self.labels and self.time_counter <= 30:
+            # if self.detected_full_flag and self.green_box_approached < 1 and 'green_box' in self.labels and self.time_counter <= 30 or self.green_box_continue_time_counter <= 10:
+            if self.detected_full_flag and self.green_box_approached < 1 and 'green_box' in self.labels or self.time_counter <= 30:
+                rospy.loginfo(self.green_box_continue_time_counter)
+                self.green_box_continue_time_counter += DURATION
                 self.time_counter += DURATION
                 rospy.loginfo(self.time_counter)
                 self.camera_send_control_commands() # Pass the appropriate laser_scan_msg
@@ -278,7 +284,8 @@ class D1_node:
                 # if self.label_string_count < 2 and self.detected:
                 rospy.loginfo(self.width)
                 rospy.loginfo(self.average_range)
-                if self.width > 140 or (self.width > 30 and self.average_range < 1.0) or self.average_range < 0.45:
+                # if self.width > 140 or (self.width > 30 and self.average_range < 1.0) or self.average_range < 0.45:
+                if self.width > 140 or (self.width > 30 and self.average_range < 1.0):
                     if self.label_string_count < 1:#ここは本来二つカウンタを設ける必要がある．
                         self.label_string_publisher(self.get_max_tag())#この行は未検証
                         self.label_string()
@@ -297,7 +304,13 @@ class D1_node:
         # if self.go_on_flag and self.detect_box and self.detected_full_flag and self.blue_box_approached == 1:
         # if self.go_on_flag and self.detect_box and self.detected_full_flag and self.label_msg2 == 'blue_box':
         if self.go_on_flag and self.detect_box and self.green_box_process_finished:
-            if self.detected_full_flag and 'blue_box' in self.labels:#ここにもカウンタを足す必要がある#detect_full_flagも削る必要がある
+            rospy.loginfo(self.blue_box_continue_time_counter)
+            if  not ('blue_box' in self.labels):
+                self.blue_box_continue_time_counter += DURATION
+                rospy.loginfo("blue_box_continue_time_counter: %f",self.blue_box_continue_time_counter)
+            elif 'blue_box' in self.labels:
+                self.blue_box_continue_time_counter = 0
+            if self.detected_full_flag and 'blue_box' in self.labels or self.blue_box_continue_time_counter <= 30:#ここにもカウンタを足す必要がある#detect_full_flagも削る必要がある
                 #green_box_detectフラグを条件に変更したほうが良い
                 rospy.loginfo("going green_box")
             # Call lidar_send_control_commands with laser_scan_msg argument
@@ -306,7 +319,8 @@ class D1_node:
                 # if self.label_string_count < 2 and self.detected:
                 rospy.loginfo(self.width)
                 rospy.loginfo(self.average_range)
-                if self.width > 140 or (self.width > 30 and self.average_range < 1.0) or self.average_range < 0.45:
+                # if self.width > 140 or (self.width > 30 and self.average_range < 1.0) or self.average_range < 0.45:
+                if self.width > 140 or (self.width > 30 and self.average_range < 1.0):
                     if self.label_string_count < 1:#２つ目のカウンタが必要
                         self.label_string_publisher(self.get_max_tag())#この行は未検証
                         self.label_string()
