@@ -80,7 +80,7 @@ class D1_node:
 
         self.green_box_continue_time_counter = 0
         self.blue_box_continue_time_counter = 0
-
+        self.once_detection_flag = False
     def label_string_publisher(self, max_tag):
         self.label_publisher.publish(max_tag)
 
@@ -305,12 +305,13 @@ class D1_node:
         # if self.go_on_flag and self.detect_box and self.detected_full_flag and self.label_msg2 == 'blue_box':
         if self.go_on_flag and self.detect_box and self.green_box_process_finished:
             rospy.loginfo(self.blue_box_continue_time_counter)
-            if  not ('blue_box' in self.labels):
+            if  not ('blue_box' in self.labels) and self.once_detection_flag:
                 self.blue_box_continue_time_counter += DURATION
                 rospy.loginfo("blue_box_continue_time_counter: %f",self.blue_box_continue_time_counter)
             elif 'blue_box' in self.labels:
+                self.once_detection_flag = True
                 self.blue_box_continue_time_counter = 0
-            if self.detected_full_flag and 'blue_box' in self.labels or self.blue_box_continue_time_counter <= 30:#ここにもカウンタを足す必要がある#detect_full_flagも削る必要がある
+            if self.detected_full_flag and 'blue_box' in self.labels and self.blue_box_continue_time_counter <= 30 and self.once_detection_flag:#ここにもカウンタを足す必要がある#detect_full_flagも削る必要がある
                 #green_box_detectフラグを条件に変更したほうが良い
                 rospy.loginfo("going green_box")
             # Call lidar_send_control_commands with laser_scan_msg argument
