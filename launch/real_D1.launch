@@ -1,7 +1,7 @@
 <launch>
   <node name="D1_node" pkg="box_chaser" type="test_false.py" output="screen"></node>
   <node name="usb_cam" pkg="usb_cam" type="usb_cam_node" output="screen">
-    <param name="video_device" value="/dev/gamma_cam"/>
+    <param name="video_device" value="/dev/yolo_cam"/>
   </node>
  
   <include file="$(find yolov5_pytorch_ros)/launch/detector_forusbcam_s_8_350.launch">
